@@ -28,15 +28,21 @@
           </v-card>
         </v-dialog>
       </div>
-      <Heading :title="$t('home.GREETING', [name])" />
-      <Description :description="$t('home.DESCRIPTION')" />
+      <Map />
+      <!-- <Heading :title="$t('home.GREETING', [name])" /> -->
+      <!-- <Description :description="$t('home.DESCRIPTION')" /> -->
     </v-layout>
-    <ProjectDescription />
+    <!-- <ProjectDescription /> -->
   </v-container>
 </template>
 
 <script>
+import Map from './core/Map'
+
 export default {
+  components: {
+    Map
+  },
   metaInfo() {
     return {
       title: this.$store.getters.appTitle,
