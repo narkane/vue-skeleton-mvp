@@ -28,8 +28,8 @@
           </v-card>
         </v-dialog>
       </div>
+      <Heading :title="$t('home.GREETING', [name])" />
       <Map />
-      <!-- <Heading :title="$t('home.GREETING', [name])" /> -->
       <!-- <Description :description="$t('home.DESCRIPTION')" /> -->
     </v-layout>
     <!-- <ProjectDescription /> -->
