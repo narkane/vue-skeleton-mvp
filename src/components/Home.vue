@@ -29,7 +29,7 @@
         </v-dialog>
       </div>
       <Heading :title="$t('home.GREETING', [name])" />
-      <Map />
+      <GoogleMap />
       <!-- <Description :description="$t('home.DESCRIPTION')" /> -->
     </v-layout>
     <!-- <ProjectDescription /> -->
@@ -37,12 +37,7 @@
 </template>
 
 <script>
-import Map from './core/Map'
-
 export default {
-  components: {
-    Map
-  },
   metaInfo() {
     return {
       title: this.$store.getters.appTitle,
