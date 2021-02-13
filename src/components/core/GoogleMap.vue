@@ -1,6 +1,6 @@
 <template>
-  <div emoji>
-    <div class="emoji">
+  <div id="zindex2">
+    <!-- <div class="emoji-font">
       &#x1f9c1; Search and add a pin👨‍💻
       <BR />
       <label>
@@ -9,15 +9,7 @@
       </label>
       <br />
     </div>
-    <br />
-    <gmap-map id="gmap" :center="center" :zoom="12">
-      <gmap-marker
-        :key="index"
-        v-for="(m, index) in markers"
-        :position="m.position"
-        @click="center = m.position"
-      ></gmap-marker>
-    </gmap-map>
+    <br /> -->
   </div>
 </template>
 
@@ -37,6 +29,7 @@ export default {
 
   mounted() {
     this.geolocate()
+    this.addMarker()
   },
 
   methods: {
@@ -68,9 +61,17 @@ export default {
 }
 </script>
 
-<style scoped>
-#gmap {
+<style>
+.map {
   height: 400px;
+  /* width: 100%; */
+}
+#g-map {
   width: 100%;
+}
+#zindex2 {
+  /* position: absolute; */
+  z-index: 1;
+  /* pointer-events: none; */
 }
 </style>

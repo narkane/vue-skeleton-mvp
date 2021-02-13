@@ -73,13 +73,10 @@ export default {
 </script>
 
 <style>
-.emoji {
-  border: 2px solid aliceblue;
+.emoji-font {
   font-family: 'OpenMojiColor';
   font-style: normal;
   color: initial;
-  font-weight: 100;
-  font-size: 32pt;
 }
 @font-face {
   font-family: 'OpenMojiColor';
