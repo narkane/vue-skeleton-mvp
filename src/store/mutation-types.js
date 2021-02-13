@@ -29,3 +29,5 @@ export const TOTAL_CITIES = 'TOTAL_CITIES'
 // Admin - Users
 export const USERS = 'USERS'
 export const TOTAL_USERS = 'TOTAL_USERS'
+// map
+export const MAP_OBJECT = 'MAP_OBJECT'
