@@ -19,8 +19,6 @@ Vue.use(gMaps, {
   }
 })
 
-console.log(process.env.VUE_APP_GMAPS_API_KEY)
-
 Vue.config.productionTip = false
 Vue.use(VuetifyConfirm, { vuetify })
 

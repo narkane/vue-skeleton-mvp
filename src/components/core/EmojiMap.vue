@@ -474,8 +474,8 @@ export default {
   },
   mounted() {
     this.geolocate()
-    this.addMarker()
     this.initCanvas()
+    this.addMarker()
   },
   methods: {
     initCanvas() {
