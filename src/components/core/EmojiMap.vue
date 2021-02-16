@@ -476,6 +476,7 @@ export default {
     this.geolocate()
     this.initCanvas()
     this.addMarker()
+    this.setPlace(this.center)
   },
   methods: {
     initCanvas() {
