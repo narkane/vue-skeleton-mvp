@@ -19,7 +19,7 @@ const mutations = {
 }
 
 const state = {
-  appTitle: 'OurEarth.care',
+  appTitle: 'OurEarth.Care',
   appVersion: packageJson.version
 }
 
