@@ -69,8 +69,9 @@ export default {
       ctx: null,
       gmap: null,
       zoom: null,
-      minZoomLevel: 3,
+      minZoomLevel: 4,
       rectOptions: null,
+      tileSize: 256,
       mapStyleList: {
         retro: [
           {
@@ -517,6 +518,13 @@ export default {
       this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
       console.log(this.bounds)
     },
+    mercCoords(map) {
+      this.bounds.ne = this.mercatorProject(map.getBounds().getNorthEast())
+      this.bounds.sw = this.mercatorProject(map.getBounds().getSouthWest())
+      // this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
+      // this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
+      console.log(this.bounds)
+    },
     init() {
       this.gmap = document.getElementById('g-map')
       this.canvas = document.getElementById('emoji-map')
@@ -525,12 +533,14 @@ export default {
       this.$refs.mapRef.$mapPromise.then((map) => {
         // map.panTo({lat: 1.38, lng: 103.80})
         map.addListener('mousemove', (event) => {
+          // console.log('mercP: ' + this.mercatorProject(event.latLng))
           const coordsLabel = document.getElementById('tdCursor')
-          let lat = event.latLng.lat()
-          lat = lat.toFixed(4)
-          let lng = event.latLng.lng()
-          lng = lng.toFixed(4)
-          coordsLabel.innerHTML = `Latitude: ${lat}  Longitude: ${lng}`
+          let x = this.mercatorProject(event.latLng).x
+          x = x.toFixed(4)
+          let y = this.mercatorProject(event.latLng).y
+          y = y.toFixed(4)
+          coordsLabel.innerHTML = `X: ${x}  Y: ${y}`
+          // coordsLabel.innerHTML = this.mercatorProject(event.latLng)
         })
         map.addListener('bounds_changed', () => {
           // Limit the zoom level to 3
@@ -541,14 +551,24 @@ export default {
           } else {
             this.zoom = map.getZoom()
             // set bounds
-            this.noNegCoords(map)
-            this.mapCoordSize.width = Math.abs(
-              this.bounds.ne.lng - this.bounds.sw.lng
-            )
+            // this.noNegCoords(map)
+            this.mercCoords(map)
+            this.mapCoordSize.width =
+              Math.abs(
+                (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+              ) >=
+              255 / 2
+                ? 255 -
+                  Math.abs(
+                    (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+                  )
+                : Math.abs(
+                    (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+                  )
             this.mapCoordSize.height = Math.abs(
-              this.bounds.ne.lat - this.bounds.sw.lat
+              this.bounds.ne.y - this.bounds.sw.y
             )
-            console.log(this.mapCoordSize)
+            console.log(`mapCoordSize: ${this.mapCoordSize}`)
 
             if (this.canvas.getContext) {
               this.drawGrid()
@@ -579,7 +599,9 @@ export default {
       // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
       // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
       // 1113174.304 mEL @ zoom = 1 */
-      this.ctx.strokeStyle = 'rgb(175, 255, 127)'
+      this.ctx.strokeStyle = `rgb(${175 / this.currentScale}, ${
+        255 / this.currentScale
+      }, 127)`
       const pxPerEmoji =
         1113174.304 /
         ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
@@ -593,11 +615,10 @@ export default {
     },
     drawLat(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
-      console.log(`ppC: ${pxPerCoord}`)
+      console.log(`ppC lat: ${pxPerCoord}`)
       for (
         let i =
-          (Math.ceil(this.bounds.sw.lng / emojis) * emojis -
-            this.bounds.sw.lng) *
+          (Math.ceil(this.bounds.sw.x / emojis) * emojis - this.bounds.sw.x) *
           pxPerCoord;
         i < this.canvas.width;
         i += emojis * pxPerCoord
@@ -608,19 +629,16 @@ export default {
     },
     drawLng(emojis) {
       const pxPerCoord = this.canvas.height / this.mapCoordSize.height
-      console.log(`ppC: ${pxPerCoord}`)
+      console.log(`ppC lng: ${pxPerCoord}`)
       for (
         let i =
-          (Math.ceil(this.bounds.ne.lat / emojis) * emojis -
-            this.bounds.ne.lat) *
+          (Math.ceil(this.bounds.ne.y / emojis) * emojis - this.bounds.ne.y) *
           pxPerCoord;
         i < this.canvas.height;
         i += emojis * pxPerCoord
       ) {
         console.log(
-          `round: ${
-            Math.ceil(this.bounds.ne.lat / 10) * 10 - this.bounds.ne.lat
-          }`
+          `round: ${Math.ceil(this.bounds.ne.y / 10) * 10 - this.bounds.ne.y}`
         )
         this.ctx.moveTo(this.canvas.width, i)
         this.ctx.lineTo(0, i)
@@ -633,6 +651,19 @@ export default {
       //   // this.ctx.moveTo(0, this.canvas.height - i)
       //   // this.ctx.lineTo(this.canvas.width, this.canvas.height - i)
       // }
+    },
+    // The mapping between latitude, longitude and pixels is defined by the web
+    // mercator projection.
+    mercatorProject(latLng) {
+      let siny = Math.sin((latLng.lat() * Math.PI) / 180)
+      // Truncating to 0.9999 effectively limits latitude to 89.189. This is
+      // about a third of a tile past the edge of the world tile.
+      siny = Math.min(Math.max(siny, -0.9999), 0.9999)
+      return new this.google.maps.Point(
+        this.tileSize * (0.5 + latLng.lng() / 360),
+        this.tileSize *
+          (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
+      )
     },
     eZoom() {
       return (this.zoom - 2) / 4
@@ -684,11 +715,11 @@ export default {
       const plugin = document.createElement('script')
       plugin.setAttribute(
         'src',
-        `https://assets.what3words.com/sdk/v3/what3words.js?key=${process.env.VUE_APP_W3W_API_KEY}`
+        `https://maps.googleapis.com/maps/api/js?key=${process.env.VUE_APP_GMAPS_API_KEY}&callback=init&libraries=&v=weekly`
       )
       plugin.async = true
       document.head.appendChild(plugin)
-      console.log(process.env.VUE_APP_W3W_API_KEY)
+      console.log(process.env.VUE_APP_GMAPS_API_KEY)
     }
   }
 }
