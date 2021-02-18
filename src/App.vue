@@ -13,6 +13,8 @@
   </v-app>
 </template>
 
+<script :src="w3wapi"></script>
+
 <script>
 import Toolbar from '@/components/core/Toolbar.vue'
 import Loading from '@/components/core/Loading.vue'
