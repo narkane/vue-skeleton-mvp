@@ -6,7 +6,7 @@
       &nbsp;{{ $t('footer.BY') }}:
     </div>
     <!-- <a href="https://daniel-avellaneda.com"> -->
-    Ben Maker & John Thummel
+    James Maker & John Thummel
     <!-- </a> -->
   </v-footer>
 </template>
