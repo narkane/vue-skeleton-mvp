@@ -12,17 +12,15 @@ import VuetifyConfirm from 'vuetify-confirm'
 
 import * as gMaps from 'vue2-google-maps'
 
+Vue.config.productionTip = false
+Vue.use(VuetifyConfirm, { vuetify })
+
 Vue.use(gMaps, {
   load: {
-    key: 'AIzaSyBHKuT5HsCTe5CI27A8eWctv1xMn0aojTg',
+    key: process.env.VUE_APP_GMAPS_API_KEY,
     libraries: 'places'
   }
 })
-
-console.log(process.env.VUE_APP_GMAPS_API_KEY)
-
-Vue.config.productionTip = false
-Vue.use(VuetifyConfirm, { vuetify })
 
 const app = new Vue({
   vuetify,
