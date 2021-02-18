@@ -37,8 +37,9 @@ export default {
   },
   data() {
     return {
-      // l1PxPerCoord: this.canvas.width / this.mapCoordSize.width,
-      scale: 1,
+      // l1PxPerCoord: this.canvas.width / this.mapCoordSize.width,s
+      currentScale: 3,
+      scale: [10, 10 / 36, 10 / 1296, 10 / 46656, 10 / 1679616],
       bounds: {
         ne: {
           lat: null,
@@ -68,7 +69,7 @@ export default {
       ctx: null,
       gmap: null,
       zoom: null,
-      minZoomLevel: 5,
+      minZoomLevel: 3,
       rectOptions: null,
       mapStyleList: {
         retro: [
@@ -533,6 +534,8 @@ export default {
         })
         map.addListener('bounds_changed', () => {
           // Limit the zoom level to 3
+          // this.minZoomLevel = 20 / this.currentScale
+          this.currentScale = Math.floor(map.getZoom() / 5)
           if (map.getZoom() < this.minZoomLevel) {
             map.setZoom(this.minZoomLevel)
           } else {
@@ -568,49 +571,51 @@ export default {
       this.canvas.width = this.gmap.offsetWidth
     },
     drawGrid() {
+      const level = this.scale[this.currentScale]
+
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
       this.ctx.beginPath()
       // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
       // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
       // 1113174.304 mEL @ zoom = 1 */
-      this.ctx.strokeStyle = 'rgb(255, 255, 255)'
+      this.ctx.strokeStyle = 'rgb(175, 255, 127)'
       const pxPerEmoji =
         1113174.304 /
         ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
           Math.pow(2, this.zoom))
 
-      this.drawLat()
-      this.drawLng()
+      this.drawLat(level)
+      this.drawLng(level)
       this.ctx.closePath()
       this.ctx.stroke()
       console.log(this.eZoom())
     },
-    drawLat() {
+    drawLat(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
       console.log(`ppC: ${pxPerCoord}`)
       for (
         let i =
-          (Math.ceil(this.bounds.sw.lng / this.scale) * this.scale -
+          (Math.ceil(this.bounds.sw.lng / emojis) * emojis -
             this.bounds.sw.lng) *
           pxPerCoord;
         i < this.canvas.width;
-        i += this.scale * pxPerCoord
+        i += emojis * pxPerCoord
       ) {
         this.ctx.moveTo(i, 0)
         this.ctx.lineTo(i, 400)
       }
     },
-    drawLng() {
+    drawLng(emojis) {
       const pxPerCoord = this.canvas.height / this.mapCoordSize.height
       console.log(`ppC: ${pxPerCoord}`)
       for (
         let i =
-          (Math.ceil(this.bounds.ne.lat / this.scale) * this.scale -
+          (Math.ceil(this.bounds.ne.lat / emojis) * emojis -
             this.bounds.ne.lat) *
           pxPerCoord;
         i < this.canvas.height;
-        i += this.scale * pxPerCoord
+        i += emojis * pxPerCoord
       ) {
         console.log(
           `round: ${
