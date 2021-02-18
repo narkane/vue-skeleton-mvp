@@ -1,5 +1,6 @@
 <template>
   <div>
+    <div id="tdCursor">doge</div>
     <div id="zindex1">
       <canvas class="map" id="emoji-map" width="300" height="400">
         Canvas isnt loading in your browser!
@@ -10,7 +11,7 @@
       class="map"
       id="g-map"
       :center="center"
-      :zoom="zoom"
+      :zoom="minZoomLevel"
       :styles="mapStyleList.blueGray"
     >
       <gmap-marker
@@ -26,12 +27,37 @@
 <script>
 import { gmapApi } from 'vue2-google-maps'
 
+const what3words = require('@what3words/api')
+
+what3words.setOptions({ key: process.env.VUE_APP_W3W_API_KEY })
+
 export default {
   computed: {
     google: gmapApi
   },
   data() {
     return {
+      // l1PxPerCoord: this.canvas.width / this.mapCoordSize.width,
+      scale: 1,
+      bounds: {
+        ne: {
+          lat: null,
+          lng: null
+        },
+        sw: {
+          lat: null,
+          lng: null
+        }
+      },
+      mapCoordSize: {
+        width: null,
+        height: null
+      },
+      mouse: {
+        down: false,
+        dir: -1,
+        oldX: 0
+      },
       // default to Montreal
       // change this to whatever makes sense
       center: { lat: 45, lng: -73.587 },
@@ -41,7 +67,9 @@ export default {
       canvas: null,
       ctx: null,
       gmap: null,
-      zoom: 1,
+      zoom: null,
+      minZoomLevel: 5,
+      rectOptions: null,
       mapStyleList: {
         retro: [
           {
@@ -473,38 +501,74 @@ export default {
     }
   },
   mounted() {
+    this.init()
     this.geolocate()
-    this.initCanvas()
-    this.addMarker()
-    this.setPlace(this.center)
+    // this.drawGrid()
+    // this.addMarker()
+
+    // this.mouseCheck()
   },
   methods: {
-    initCanvas() {
-      this.canvas = document.getElementById('emoji-map')
+    noNegCoords(map) {
+      this.bounds.ne.lat = 180 - (map.getBounds().getNorthEast().lat() + 90)
+      this.bounds.sw.lat = 180 - (map.getBounds().getSouthWest().lat() + 90)
+      this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
+      this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
+      console.log(this.bounds)
+    },
+    init() {
       this.gmap = document.getElementById('g-map')
-      console.log('AAAAAAAAAAAAAAAH')
+      this.canvas = document.getElementById('emoji-map')
+      this.ctx = this.canvas.getContext('2d')
+
       this.$refs.mapRef.$mapPromise.then((map) => {
         // map.panTo({lat: 1.38, lng: 103.80})
-        this.zoom = map.getZoom()
-        this.google.maps.event.addListener(map, 'zoom_changed', () => {
-          this.zoom = map.getZoom()
+        map.addListener('mousemove', (event) => {
+          const coordsLabel = document.getElementById('tdCursor')
+          let lat = event.latLng.lat()
+          lat = lat.toFixed(4)
+          let lng = event.latLng.lng()
+          lng = lng.toFixed(4)
+          coordsLabel.innerHTML = `Latitude: ${lat}  Longitude: ${lng}`
+        })
+        map.addListener('bounds_changed', () => {
+          // Limit the zoom level to 3
+          if (map.getZoom() < this.minZoomLevel) {
+            map.setZoom(this.minZoomLevel)
+          } else {
+            this.zoom = map.getZoom()
+            // set bounds
+            this.noNegCoords(map)
+            this.mapCoordSize.width = Math.abs(
+              this.bounds.ne.lng - this.bounds.sw.lng
+            )
+            this.mapCoordSize.height = Math.abs(
+              this.bounds.ne.lat - this.bounds.sw.lat
+            )
+            console.log(this.mapCoordSize)
+
+            if (this.canvas.getContext) {
+              this.drawGrid()
+            } else {
+              // canvas unsupported
+              console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
+            }
+          }
           console.log(`gmap: ${this.zoom}`)
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-          this.drawGrid()
+
+          // console.log(
+          //   'width in (px/coords): ' +
+          //     this.canvas.width / this.mapCoordSize.width
+          // )
+          // console.log('width in coords: ' + this.mapCoordSize.width)
+          // console.log(this.bounds.sw.lat())
+          // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
         })
       })
-
       this.canvas.width = this.gmap.offsetWidth
-
-      if (this.canvas.getContext) {
-        this.drawGrid()
-      } else {
-        // canvas unsupported
-        console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
-      }
     },
     drawGrid() {
-      this.ctx = this.canvas.getContext('2d')
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
 
       this.ctx.beginPath()
       // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
@@ -516,34 +580,57 @@ export default {
         ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
           Math.pow(2, this.zoom))
 
-      this.drawLat(pxPerEmoji)
-      this.drawLng(pxPerEmoji)
+      this.drawLat()
+      this.drawLng()
       this.ctx.closePath()
       this.ctx.stroke()
+      console.log(this.eZoom())
     },
-    drawLat(ppe) {
-      for (let i = 0 + this.canvas.width / 2; i < this.canvas.width; i += ppe) {
-        // console.log(pxPerEmoji)
-        // 14.222669) {
-        // Lat lines
+    drawLat() {
+      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      console.log(`ppC: ${pxPerCoord}`)
+      for (
+        let i =
+          (Math.ceil(this.bounds.sw.lng / this.scale) * this.scale -
+            this.bounds.sw.lng) *
+          pxPerCoord;
+        i < this.canvas.width;
+        i += this.scale * pxPerCoord
+      ) {
         this.ctx.moveTo(i, 0)
         this.ctx.lineTo(i, 400)
-        this.ctx.moveTo(this.canvas.width - i, 0)
-        this.ctx.lineTo(this.canvas.width - i, 400)
       }
     },
-    drawLng(ppe) {
+    drawLng() {
+      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
+      console.log(`ppC: ${pxPerCoord}`)
       for (
-        let i = 0 + this.canvas.height / 2;
+        let i =
+          (Math.ceil(this.bounds.ne.lat / this.scale) * this.scale -
+            this.bounds.ne.lat) *
+          pxPerCoord;
         i < this.canvas.height;
-        i += ppe
+        i += this.scale * pxPerCoord
       ) {
-        // Lng lines
-        this.ctx.moveTo(0, i)
-        this.ctx.lineTo(this.canvas.width, i)
-        this.ctx.moveTo(0, this.canvas.height - i)
-        this.ctx.lineTo(this.canvas.width, this.canvas.height - i)
+        console.log(
+          `round: ${
+            Math.ceil(this.bounds.ne.lat / 10) * 10 - this.bounds.ne.lat
+          }`
+        )
+        this.ctx.moveTo(this.canvas.width, i)
+        this.ctx.lineTo(0, i)
       }
+
+      // for (let i = 0; i < this.canvas.height; i += ppe) {
+      //   // Lng lines
+      //   this.ctx.moveTo(0, i)
+      //   this.ctx.lineTo(this.canvas.width, i)
+      //   // this.ctx.moveTo(0, this.canvas.height - i)
+      //   // this.ctx.lineTo(this.canvas.width, this.canvas.height - i)
+      // }
+    },
+    eZoom() {
+      return (this.zoom - 2) / 4
     },
     // receives a place object via the autocomplete component
     setPlace(place) {
@@ -567,8 +654,36 @@ export default {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         }
-        console.log(this.center)
+        console.log(`center: ${this.center}`)
       })
+    },
+    mouseCheck() {
+      const that = this
+      document.onmousedown = function () {
+        that.mouse.down = true
+      }
+      document.onmouseup = function () {
+        that.mouse.down = false
+      }
+      document.onmousemove = function (e) {
+        if (that.mouse.down) {
+          that.mouse.dir = e.pageX - that.mouse.oldX
+
+          // that.drawGrid()
+          // that.mouse.dir = 0
+        }
+        that.mouse.oldX = e.pageX
+      }
+    },
+    addRemoteLibraries() {
+      const plugin = document.createElement('script')
+      plugin.setAttribute(
+        'src',
+        `https://assets.what3words.com/sdk/v3/what3words.js?key=${process.env.VUE_APP_W3W_API_KEY}`
+      )
+      plugin.async = true
+      document.head.appendChild(plugin)
+      console.log(process.env.VUE_APP_W3W_API_KEY)
     }
   }
 }
