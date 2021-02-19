@@ -2,7 +2,7 @@
   <div>
     <div id="tdCursor">doge</div>
     <div id="zindex1">
-      <canvas class="map" id="emoji-map" width="300" height="400">
+      <canvas class="map" id="emoji-map" width="600" height="400">
         Canvas isnt loading in your browser!
       </canvas>
     </div>
@@ -27,19 +27,19 @@
 <script>
 import { gmapApi } from 'vue2-google-maps'
 
-const what3words = require('@what3words/api')
+// const what3words = require('@what3words/api')
 
-what3words.setOptions({ key: process.env.VUE_APP_W3W_API_KEY })
+// what3words.setOptions({ key: process.env.VUE_APP_W3W_API_KEY })
 
 export default {
-  computed: {
-    google: gmapApi
-  },
   data() {
     return {
-      // l1PxPerCoord: this.canvas.width / this.mapCoordSize.width,s
-      currentScale: 3,
-      scale: [10, 10 / 36, 10 / 1296, 10 / 46656, 10 / 1679616],
+      emojiIndexReference: {
+        '00': '&x#1F004',
+        '01': ''
+      },
+      currentScale: 2,
+      scale: [256 / 36, 256 / 1296, 256 / 46656, 256 / 1679616],
       bounds: {
         ne: {
           lat: null,
@@ -69,7 +69,7 @@ export default {
       ctx: null,
       gmap: null,
       zoom: null,
-      minZoomLevel: 4,
+      minZoomLevel: 3,
       rectOptions: null,
       tileSize: 256,
       mapStyleList: {
@@ -502,13 +502,15 @@ export default {
       }
     }
   },
+  computed: {
+    google: gmapApi
+  },
   mounted() {
     this.init()
     this.geolocate()
+    // this.drawEmojis()
     // this.drawGrid()
     // this.addMarker()
-
-    // this.mouseCheck()
   },
   methods: {
     noNegCoords(map) {
@@ -516,22 +518,28 @@ export default {
       this.bounds.sw.lat = 180 - (map.getBounds().getSouthWest().lat() + 90)
       this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
       this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
-      console.log(this.bounds)
+      // console.log(this.bounds)
     },
     mercCoords(map) {
       this.bounds.ne = this.mercatorProject(map.getBounds().getNorthEast())
       this.bounds.sw = this.mercatorProject(map.getBounds().getSouthWest())
       // this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
       // this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
-      console.log(this.bounds)
+      // console.log(this.bounds)
     },
     init() {
       this.gmap = document.getElementById('g-map')
       this.canvas = document.getElementById('emoji-map')
       this.ctx = this.canvas.getContext('2d')
 
+      // this.mouseCheck()
+
       this.$refs.mapRef.$mapPromise.then((map) => {
         // map.panTo({lat: 1.38, lng: 103.80})
+        // map.set('draggable', false)
+        // map.addListener('mousedown', () => {
+        //   map.setZoom(map.getZoom() + 1)
+        // })
         map.addListener('mousemove', (event) => {
           // console.log('mercP: ' + this.mercatorProject(event.latLng))
           const coordsLabel = document.getElementById('tdCursor')
@@ -540,12 +548,11 @@ export default {
           let y = this.mercatorProject(event.latLng).y
           y = y.toFixed(4)
           coordsLabel.innerHTML = `X: ${x}  Y: ${y}`
-          // coordsLabel.innerHTML = this.mercatorProject(event.latLng)
         })
+
         map.addListener('bounds_changed', () => {
-          // Limit the zoom level to 3
-          // this.minZoomLevel = 20 / this.currentScale
-          this.currentScale = Math.floor(map.getZoom() / 5)
+          // Limit the zoom level by gmaps zoom
+          this.currentScale = this.breakLayer(map.getZoom())
           if (map.getZoom() < this.minZoomLevel) {
             map.setZoom(this.minZoomLevel)
           } else {
@@ -555,40 +562,71 @@ export default {
             this.mercCoords(map)
             this.mapCoordSize.width =
               Math.abs(
-                (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+                (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
               ) >=
-              255 / 2
-                ? 255 -
+              256 / 2
+                ? 256 -
                   Math.abs(
-                    (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+                    (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
                   )
                 : Math.abs(
-                    (this.bounds.ne.x / 255 - this.bounds.sw.x / 255) * 255
+                    (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
                   )
             this.mapCoordSize.height = Math.abs(
-              this.bounds.ne.y - this.bounds.sw.y
+              this.bounds.sw.y - this.bounds.ne.y
             )
-            console.log(`mapCoordSize: ${this.mapCoordSize}`)
+            // console.log(`mapCoordwidth: ${this.mapCoordSize.width}`)
 
             if (this.canvas.getContext) {
               this.drawGrid()
+              this.drawEmojis(
+                (this.scale[this.currentScale] * this.canvas.width) /
+                  this.mapCoordSize.width
+              )
             } else {
               // canvas unsupported
               console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
             }
           }
-          console.log(`gmap: ${this.zoom}`)
-
-          // console.log(
-          //   'width in (px/coords): ' +
-          //     this.canvas.width / this.mapCoordSize.width
-          // )
-          // console.log('width in coords: ' + this.mapCoordSize.width)
-          // console.log(this.bounds.sw.lat())
-          // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
         })
       })
       this.canvas.width = this.gmap.offsetWidth
+    },
+    breakLayer(gZoom) {
+      if (gZoom < 7) {
+        return 0
+      } else if (gZoom < 12) {
+        return 1
+      } else if (gZoom < 18) {
+        return 2
+      }
+      return 3
+    },
+    drawEmojis(nextLineDist) {
+      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      let sqID =
+        (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
+        this.scale[this.currentScale]
+      sqID += 1
+      if (sqID === 37) {
+        sqID = 1
+      }
+      console.log(sqID)
+      this.ctx.font = '12px OpenMojiColor'
+      for (let i = 0; i < this.canvas.width; i += nextLineDist) {
+        this.ctx.fillText(
+          '\u{1f9c1}',
+          this.firstLatLineInPx() + i,
+          this.firstLngLineInPx() + 20
+        )
+        for (let j = nextLineDist; j < this.canvas.height; j += nextLineDist) {
+          this.ctx.fillText(
+            '\u{1f9c1}',
+            this.firstLatLineInPx() + i,
+            this.firstLngLineInPx() + j + 12
+          )
+        }
+      }
     },
     drawGrid() {
       const level = this.scale[this.currentScale]
@@ -599,9 +637,9 @@ export default {
       // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
       // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
       // 1113174.304 mEL @ zoom = 1 */
-      this.ctx.strokeStyle = `rgb(${175 / this.currentScale}, ${
+      this.ctx.strokeStyle = `rgb(${255 / this.currentScale}, ${
         255 / this.currentScale
-      }, 127)`
+      }, 255)`
       const pxPerEmoji =
         1113174.304 /
         ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
@@ -611,46 +649,48 @@ export default {
       this.drawLng(level)
       this.ctx.closePath()
       this.ctx.stroke()
-      console.log(this.eZoom())
+      // console.log(this.eZoom())
     },
     drawLat(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
-      console.log(`ppC lat: ${pxPerCoord}`)
+      // console.log(`ppC lat: ${pxPerCoord}`)
       for (
-        let i =
-          (Math.ceil(this.bounds.sw.x / emojis) * emojis - this.bounds.sw.x) *
-          pxPerCoord;
+        let i = this.firstLatLineInPx();
         i < this.canvas.width;
         i += emojis * pxPerCoord
       ) {
+        // console.log(`round: ${this.firstLatLineInPx()}`)
         this.ctx.moveTo(i, 0)
         this.ctx.lineTo(i, 400)
       }
     },
     drawLng(emojis) {
-      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
-      console.log(`ppC lng: ${pxPerCoord}`)
+      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      // console.log(`ppC lng: ${pxPerCoord}`)
       for (
-        let i =
-          (Math.ceil(this.bounds.ne.y / emojis) * emojis - this.bounds.ne.y) *
-          pxPerCoord;
+        let i = this.firstLngLineInPx();
         i < this.canvas.height;
         i += emojis * pxPerCoord
       ) {
-        console.log(
-          `round: ${Math.ceil(this.bounds.ne.y / 10) * 10 - this.bounds.ne.y}`
-        )
         this.ctx.moveTo(this.canvas.width, i)
         this.ctx.lineTo(0, i)
       }
-
-      // for (let i = 0; i < this.canvas.height; i += ppe) {
-      //   // Lng lines
-      //   this.ctx.moveTo(0, i)
-      //   this.ctx.lineTo(this.canvas.width, i)
-      //   // this.ctx.moveTo(0, this.canvas.height - i)
-      //   // this.ctx.lineTo(this.canvas.width, this.canvas.height - i)
-      // }
+    },
+    firstLatLineInPx() {
+      const emojis = this.scale[this.currentScale]
+      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      return (
+        (Math.ceil(this.bounds.sw.x / emojis) * emojis - this.bounds.sw.x) *
+        pxPerCoord
+      )
+    },
+    firstLngLineInPx() {
+      const emojis = this.scale[this.currentScale]
+      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
+      return (
+        (Math.ceil(this.bounds.ne.y / emojis) * emojis - this.bounds.ne.y) *
+        pxPerCoord
+      )
     },
     // The mapping between latitude, longitude and pixels is defined by the web
     // mercator projection.
@@ -664,9 +704,6 @@ export default {
         this.tileSize *
           (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
       )
-    },
-    eZoom() {
-      return (this.zoom - 2) / 4
     },
     // receives a place object via the autocomplete component
     setPlace(place) {
@@ -690,7 +727,7 @@ export default {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         }
-        console.log(`center: ${this.center}`)
+        // console.log(`center: ${this.center}`)
       })
     },
     mouseCheck() {
@@ -703,12 +740,11 @@ export default {
       }
       document.onmousemove = function (e) {
         if (that.mouse.down) {
-          that.mouse.dir = e.pageX - that.mouse.oldX
-
+          // that.mouse.dir = e.pageX - that.mouse.oldX
           // that.drawGrid()
           // that.mouse.dir = 0
         }
-        that.mouse.oldX = e.pageX
+        // that.mouse.oldX = e.pageX
       }
     },
     addRemoteLibraries() {
@@ -719,7 +755,7 @@ export default {
       )
       plugin.async = true
       document.head.appendChild(plugin)
-      console.log(process.env.VUE_APP_GMAPS_API_KEY)
+      // console.log(process.env.VUE_APP_GMAPS_API_KEY)
     }
   }
 }
@@ -727,7 +763,7 @@ export default {
 
 <style scoped>
 #emoji-map {
-  width: calc(100vw - 60px);
+  width: 600px; /* calc(100vw - 60px);*/
   border: 2px dashed orange;
   color: white;
   pointer-events: none;
@@ -738,9 +774,11 @@ export default {
   pointer-events: none;
 }
 .map {
+  position: relative;
+  left: calc((100vw - 600px) / 2 - 30px);
   height: 400px;
 }
 #g-map {
-  width: 100%;
+  width: 600px;
 }
 </style>
