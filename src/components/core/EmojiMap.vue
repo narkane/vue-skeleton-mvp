@@ -1924,7 +1924,9 @@ export default {
           if (map.getZoom() < this.minZoomLevel) {
             map.setZoom(this.minZoomLevel)
           } else {
+            this.fixedZooms(map)
             this.zoom = map.getZoom()
+            // console.log('zooooooooooooom: ' + this.zoom)
             // set bounds
             // this.noNegCoords(map)
             this.mercCoords(map)
@@ -1963,6 +1965,29 @@ export default {
     findSqIDByWorldCoords(wCoords) {
       return Math.floor(wCoords / this.scale[this.currentScale]) % 36
     },
+    fixedZooms(map) {
+      if (this.zoom > map.getZoom()) {
+        if (map.getZoom() === 6) {
+          map.setZoom(5)
+        } else if (map.getZoom() === 11) {
+          map.setZoom(10)
+        } else if (map.getZoom() === 17) {
+          map.setZoom(16)
+        } else if (map.getZoom() === 22) {
+          map.setZoom(21)
+        }
+      } else if (this.zoom < map.getZoom()) {
+        if (map.getZoom() === 6) {
+          map.setZoom(7)
+        } else if (map.getZoom() === 11) {
+          map.setZoom(12)
+        } else if (map.getZoom() === 17) {
+          map.setZoom(18)
+        } else if (map.getZoom() === 22) {
+          map.setZoom(21)
+        }
+      }
+    },
     breakLayer(gZoom) {
       if (gZoom < 7) {
         return 0
@@ -1995,13 +2020,13 @@ export default {
       // console.log(sqID)
       this.ctx.font = '12px OpenMojiColor'
       for (let i = 0; i < this.canvas.width; i += nextLineDist) {
-        this.ctx.fillText(
-          String.fromCodePoint(
-            `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
-          ),
-          this.firstLatLineInPx() - nextLineDist + i,
-          this.firstLngLineInPx() - nextLineDist + 12
-        )
+        // this.ctx.fillText(
+        //   String.fromCodePoint(
+        //     `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
+        //   ),
+        //   this.firstLatLineInPx() - nextLineDist + i,
+        //   this.firstLngLineInPx() - nextLineDist + 12
+        // )
         if (sqID.x < 35) {
           sqID.x++
         } else {
@@ -2009,7 +2034,7 @@ export default {
         }
         sqID.y = this.findSqIDByWorldCoords(this.bounds.ne.y)
         // console.log(sqID.y.toString(36))
-        for (let j = nextLineDist; j < this.canvas.height; j += nextLineDist) {
+        for (let j = 0; j < this.canvas.height; j += nextLineDist) {
           this.ctx.fillText(
             String.fromCodePoint(
               `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
