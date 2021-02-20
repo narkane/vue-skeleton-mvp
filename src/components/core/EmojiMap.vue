@@ -1872,11 +1872,9 @@ export default {
     google: gmapApi
   },
   mounted() {
-    this.init()
     this.geolocate()
-    // this.drawEmojis()
-    // this.drawGrid()
     // this.addMarker()
+    this.init()
   },
   methods: {
     noNegCoords(map) {
@@ -1901,24 +1899,28 @@ export default {
       // this.mouseCheck()
 
       this.$refs.mapRef.$mapPromise.then((map) => {
-        // map.panTo({lat: 1.38, lng: 103.80})
-        // map.set('draggable', false)
-        // map.addListener('mousedown', () => {
-        //   map.setZoom(map.getZoom() + 1)
-        // })
         map.addListener('mousemove', (event) => {
-          // console.log('mercP: ' + this.mercatorProject(event.latLng))
           const coordsLabel = document.getElementById('tdCursor')
           let x = this.mercatorProject(event.latLng).x
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
           y = y.toFixed(4)
-          coordsLabel.innerHTML = `X: ${x}  Y: ${y}\n sqID.x: ${this.findSqIDByWorldCoords(
+          coordsLabel.innerHTML = `X: ${x}  Y: ${y}<BR/> sqID.x: ${this.findSqIDByWorldCoords(
             x
-          )} sqID.y: ${this.findSqIDByWorldCoords(y).toString(36)}`
+          )} sqID.y: ${this.findSqIDByWorldCoords(y).toString(
+            36
+          )}<BR/>${String.fromCodePoint(
+            `0x${
+              this.emojiIndexReference[this.findSqIDByWorldCoords(x) + 1][
+                this.findSqIDByWorldCoords(y).toString(36)
+              ]
+            }`
+          )}`
         })
 
         map.addListener('bounds_changed', () => {
+          // Limit the north/south pole max bounds of map
+          this.boundWorld(map)
           // Limit the zoom level by gmaps zoom
           this.currentScale = this.breakLayer(map.getZoom())
           if (map.getZoom() < this.minZoomLevel) {
@@ -1962,6 +1964,13 @@ export default {
       })
       this.canvas.width = this.gmap.offsetWidth
     },
+    // eslint-disable-next-line max-statements
+    boundWorld(map) {
+      if (this.bounds.ne.y < 0 || this.bounds.sw.y > 256) {
+        // still within valid bounds, so save the last valid position
+        map.panTo(this.center)
+      }
+    },
     findSqIDByWorldCoords(wCoords) {
       return Math.floor(wCoords / this.scale[this.currentScale]) % 36
     },
@@ -2000,7 +2009,6 @@ export default {
     },
     drawEmojis(nextLineDist) {
       console.log(`nextLineDist: ${nextLineDist}`)
-      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
       const sqID = {
         x: this.findSqIDByWorldCoords(this.bounds.sw.x),
         // (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
@@ -2009,24 +2017,8 @@ export default {
         //     (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
         //     this.scale[this.currentScale]
       }
-      // sqID.x = Math.floor(sqID.x) + 1
-      // sqID.y = Math.floor(sqID.y) + 1
-      // if (sqID.x === 37) {
-      //   sqID.x = 1
-      // }
-      // if (sqID.y === 37) {
-      //   sqID.y = 1
-      // }
-      // console.log(sqID)
       this.ctx.font = '12px OpenMojiColor'
       for (let i = 0; i < this.canvas.width; i += nextLineDist) {
-        // this.ctx.fillText(
-        //   String.fromCodePoint(
-        //     `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
-        //   ),
-        //   this.firstLatLineInPx() - nextLineDist + i,
-        //   this.firstLngLineInPx() - nextLineDist + 12
-        // )
         if (sqID.x < 35) {
           sqID.x++
         } else {
@@ -2043,7 +2035,11 @@ export default {
             this.firstLngLineInPx() - nextLineDist + j + 12
           )
           // console.log(sqID.y.toString(36))
-          sqID.y++
+          if (sqID.y < 35) {
+            sqID.y++
+          } else {
+            sqID.y = 0
+          }
         }
       }
     },
@@ -2199,5 +2195,8 @@ export default {
 }
 #g-map {
   width: 600px;
+}
+#tdCursor {
+  /* font-family: 'OpenMojiColor'; */
 }
 </style>
