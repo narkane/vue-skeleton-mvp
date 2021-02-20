@@ -1961,7 +1961,7 @@ export default {
       this.canvas.width = this.gmap.offsetWidth
     },
     findSqIDByWorldCoords(wCoords) {
-      return Math.floor(wCoords / this.scale[this.currentScale])
+      return Math.floor(wCoords / this.scale[this.currentScale]) % 36
     },
     breakLayer(gZoom) {
       if (gZoom < 7) {
