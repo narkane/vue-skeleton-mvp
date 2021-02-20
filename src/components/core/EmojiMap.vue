@@ -1913,7 +1913,9 @@ export default {
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
           y = y.toFixed(4)
-          coordsLabel.innerHTML = `X: ${x}  Y: ${y}`
+          coordsLabel.innerHTML = `X: ${x}  Y: ${y}\n sqID.x: ${this.findSqIDByWorldCoords(
+            x
+          )} sqID.y: ${this.findSqIDByWorldCoords(y).toString(36)}`
         })
 
         map.addListener('bounds_changed', () => {
@@ -1951,12 +1953,15 @@ export default {
               )
             } else {
               // canvas unsupported
-              console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
+              // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
             }
           }
         })
       })
       this.canvas.width = this.gmap.offsetWidth
+    },
+    findSqIDByWorldCoords(wCoords) {
+      return Math.floor(wCoords / this.scale[this.currentScale])
     },
     breakLayer(gZoom) {
       if (gZoom < 7) {
@@ -1969,50 +1974,51 @@ export default {
       return 3
     },
     drawEmojis(nextLineDist) {
+      console.log(`nextLineDist: ${nextLineDist}`)
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
       const sqID = {
-        x:
-          (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
-          this.scale[this.currentScale],
-        y:
-          (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
-          this.scale[this.currentScale]
+        x: this.findSqIDByWorldCoords(this.bounds.sw.x),
+        // (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
+        // this.scale[this.currentScale],
+        y: this.findSqIDByWorldCoords(this.bounds.ne.y)
+        //     (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
+        //     this.scale[this.currentScale]
       }
-      sqID.x = Math.floor(sqID.x) + 1
-      sqID.y = Math.floor(sqID.y) + 1
-      if (sqID.x === 37) {
-        sqID.x = 1
-      }
-      if (sqID.y === 37) {
-        sqID.y = 1
-      }
-      console.log(sqID)
+      // sqID.x = Math.floor(sqID.x) + 1
+      // sqID.y = Math.floor(sqID.y) + 1
+      // if (sqID.x === 37) {
+      //   sqID.x = 1
+      // }
+      // if (sqID.y === 37) {
+      //   sqID.y = 1
+      // }
+      // console.log(sqID)
       this.ctx.font = '12px OpenMojiColor'
       for (let i = 0; i < this.canvas.width; i += nextLineDist) {
         this.ctx.fillText(
           String.fromCodePoint(
-            `0x${
-              this.emojiIndexReference[sqID.x + i / nextLineDist][
-                sqID.y.toString(36)
-              ]
-            }`
+            `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
           ),
-          this.firstLatLineInPx() + i,
-          this.firstLngLineInPx() + 20
+          this.firstLatLineInPx() - nextLineDist + i,
+          this.firstLngLineInPx() - nextLineDist + 12
         )
-        console.log(sqID.y.toString(36))
+        if (sqID.x < 35) {
+          sqID.x++
+        } else {
+          sqID.x = 0
+        }
+        sqID.y = this.findSqIDByWorldCoords(this.bounds.ne.y)
+        // console.log(sqID.y.toString(36))
         for (let j = nextLineDist; j < this.canvas.height; j += nextLineDist) {
           this.ctx.fillText(
             String.fromCodePoint(
-              `0x${
-                this.emojiIndexReference[sqID.x + i / nextLineDist][
-                  (sqID.y + j / nextLineDist).toString(36)
-                ]
-              }`
+              `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
             ),
-            this.firstLatLineInPx() + i,
-            this.firstLngLineInPx() + j + 12
+            this.firstLatLineInPx() - nextLineDist + i,
+            this.firstLngLineInPx() - nextLineDist + j + 12
           )
+          // console.log(sqID.y.toString(36))
+          sqID.y++
         }
       }
     },
