@@ -21,6 +21,9 @@
         @click="center = m.position"
       ></gmap-marker>
     </gmap-map>
+    <v-btn color="primary" rounded @click="toggleEmojis"
+      >Emojis {{ emojiToggle }}</v-btn
+    >
   </div>
 </template>
 
@@ -35,6 +38,7 @@ export default {
   data() {
     return {
       emojiLocation: '',
+      emojiToggle: 'Off',
       emojiIndexReference: {
         0: {
           0: '1F004',
@@ -1883,14 +1887,10 @@ export default {
       this.bounds.sw.lat = 180 - (map.getBounds().getSouthWest().lat() + 90)
       this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
       this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
-      // console.log(this.bounds)
     },
     mercCoords(map) {
       this.bounds.ne = this.mercatorProject(map.getBounds().getNorthEast())
       this.bounds.sw = this.mercatorProject(map.getBounds().getSouthWest())
-      // this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
-      // this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
-      // console.log(this.bounds)
     },
     init() {
       this.gmap = document.getElementById('g-map')
@@ -1906,11 +1906,13 @@ export default {
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
           y = y.toFixed(4)
-          coordsLabel.innerHTML = `X: ${x}  Y: ${y}<BR/> sqID.x: ${(
-            this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
-          ).toString(36)} sqID.y: ${(
-            this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
-          ).toString(36)}<BR/>${this.getEmojiLocation(x, y)}`
+          coordsLabel.innerHTML =
+            // `X: ${x}  Y: ${y}<BR/> sqID.x: ${(
+            //   this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
+            // ).toString(36)} sqID.y: ${(
+            //   this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
+            // ).toString(36)}<BR/>
+            `${this.getEmojiLocation(x, y)}`
         })
 
         map.addListener('bounds_changed', () => {
@@ -1923,7 +1925,6 @@ export default {
           } else {
             this.fixedZooms(map)
             this.zoom = map.getZoom()
-            // console.log('zooooooooooooom: ' + this.zoom)
             // set bounds
             // this.noNegCoords(map)
             this.mercCoords(map)
@@ -1942,7 +1943,6 @@ export default {
             this.mapCoordSize.height = Math.abs(
               this.bounds.sw.y - this.bounds.ne.y
             )
-            // console.log(`mapCoordwidth: ${this.mapCoordSize.width}`)
 
             if (this.canvas.getContext) {
               this.drawGrid()
@@ -1952,7 +1952,8 @@ export default {
               )
             } else {
               // canvas unsupported
-              // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAH!!!')
+              // eslint-disable-next-line no-alert
+              alert('CANVAS UNSUPPORTED!')
             }
           }
         })
@@ -1960,18 +1961,6 @@ export default {
       this.canvas.width = this.gmap.offsetWidth
     },
     getEmojiLocation(x, y) {
-      // this.emojiLocation = `${String.fromCodePoint(
-      //   `0x${
-      //     this.emojiIndexReference[
-      //       (this.findSqIDByWorldCoords(x) + 1) /
-      //         Math.pow(36, this.currentScale)
-      //     ][
-      //       (
-      //         this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
-      //       ).toString(36)
-      //     ]
-      //   }`
-      // )}, `
       this.emojiLocation = ''
       const xEmojiLoc = (
         this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
@@ -1983,7 +1972,7 @@ export default {
         if (yEmojiLoc[i] !== '.') {
           this.emojiLocation += `${String.fromCodePoint(
             `0x${this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]}`
-          )} `
+          )}`
         }
       }
       return this.emojiLocation
@@ -2034,42 +2023,57 @@ export default {
       }
       return 3
     },
-    drawEmojis(nextLineDist) {
-      console.log(`nextLineDist: ${nextLineDist}`)
-      const sqID = {
-        x: this.findSqIDByWorldCoordsMod36(this.bounds.sw.x),
-        // (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
-        // this.scale[this.currentScale],
-        y: this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
-        //     (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
-        //     this.scale[this.currentScale]
+    toggleEmojis() {
+      if (this.emojiToggle === 'Off') {
+        this.emojiToggle = 'On'
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        this.drawGrid()
+      } else {
+        this.emojiToggle = 'Off'
+        // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        this.drawGrid()
+        this.drawEmojis(
+          (this.scale[this.currentScale] * this.canvas.width) /
+            this.mapCoordSize.width
+        )
       }
-      this.ctx.font = '12px Serif'
-      for (let i = 0; i < this.canvas.width; i += nextLineDist) {
-        if (sqID.x < 35) {
-          sqID.x++
-        } else {
-          sqID.x = 0
+      console.log(this.emojiToggle)
+    },
+    drawEmojis(nextLineDist) {
+      if (this.emojiToggle === 'Off') {
+        const sqID = {
+          x: this.findSqIDByWorldCoordsMod36(this.bounds.sw.x),
+          // (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
+          // this.scale[this.currentScale],
+          y: this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
+          //     (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
+          //     this.scale[this.currentScale]
         }
-        sqID.y = this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
-        // console.log(sqID.y.toString(36))
-        for (let j = 0; j < this.canvas.height; j += nextLineDist) {
-          this.ctx.fillText(
-            String.fromCodePoint(
-              `0x${
-                this.emojiIndexReference[sqID.x.toString(36)][
-                  sqID.y.toString(36)
-                ]
-              }`
-            ),
-            this.firstLatLineInPx() - nextLineDist + i,
-            this.firstLngLineInPx() - nextLineDist + j + 12
-          )
-          console.log(sqID.y.toString(36))
-          if (sqID.y < 35) {
-            sqID.y++
+        this.ctx.font = '12px Serif'
+        for (let i = 0; i < this.canvas.width; i += nextLineDist) {
+          sqID.y = this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
+          for (let j = 0; j < this.canvas.height; j += nextLineDist) {
+            this.ctx.fillText(
+              String.fromCodePoint(
+                `0x${
+                  this.emojiIndexReference[sqID.x.toString(36)][
+                    sqID.y.toString(36)
+                  ]
+                }`
+              ),
+              this.firstLatLineInPx() - nextLineDist / 2 + i - 7,
+              this.firstLngLineInPx() - nextLineDist / 2 + j + 4
+            )
+            if (sqID.y < 35) {
+              sqID.y++
+            } else {
+              sqID.y = 0
+            }
+          }
+          if (sqID.x < 35) {
+            sqID.x++
           } else {
-            sqID.y = 0
+            sqID.x = 0
           }
         }
       }
@@ -2095,24 +2099,20 @@ export default {
       this.drawLng(level)
       this.ctx.closePath()
       this.ctx.stroke()
-      // console.log(this.eZoom())
     },
     drawLat(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
-      // console.log(`ppC lat: ${pxPerCoord}`)
       for (
         let i = this.firstLatLineInPx();
         i < this.canvas.width;
         i += emojis * pxPerCoord
       ) {
-        // console.log(`round: ${this.firstLatLineInPx()}`)
         this.ctx.moveTo(i, 0)
         this.ctx.lineTo(i, this.canvas.height)
       }
     },
     drawLng(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
-      // console.log(`ppC lng: ${pxPerCoord}`)
       for (
         let i = this.firstLngLineInPx();
         i < this.canvas.height;
@@ -2173,7 +2173,6 @@ export default {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         }
-        // console.log(`center: ${this.center}`)
       })
     },
     mouseCheck() {
@@ -2201,7 +2200,6 @@ export default {
       )
       plugin.async = true
       document.head.appendChild(plugin)
-      // console.log(process.env.VUE_APP_GMAPS_API_KEY)
     }
   }
 }
@@ -2232,5 +2230,6 @@ export default {
 }
 #tdCursor {
   /* font-family: 'OpenMojiColor'; */
+  font-size: 24pt;
 }
 </style>
