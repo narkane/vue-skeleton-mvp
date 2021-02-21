@@ -1,7 +1,7 @@
 {
-  "name": "vue-skeleton-mvp",
+  "name": "oec-frontend",
   "version": "5.0.15",
-  "description": "VueJS Vuetify Vue Router Vuex - Basic Project Skeleton - Starter Web App. Written on JavaScript using async/await.",
+  "description": "OurEarth.care - EmojiMap",
   "license": "MIT",
   "repository": {
     "type": "git",
