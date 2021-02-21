@@ -34,8 +34,9 @@ import { gmapApi } from 'vue2-google-maps'
 export default {
   data() {
     return {
-      emojiIndexReference: [
-        {
+      emojiLocation: '',
+      emojiIndexReference: {
+        0: {
           0: '1F004',
           1: '1F329',
           2: '1F34D',
@@ -73,7 +74,7 @@ export default {
           y: '270B',
           z: 'E009'
         },
-        {
+        1: {
           0: '1F0CF',
           1: '1F32A',
           2: '1F34E',
@@ -111,7 +112,7 @@ export default {
           y: '270B',
           z: 'E010'
         },
-        {
+        2: {
           0: '1F301',
           1: '1F32B',
           2: '1F34F',
@@ -149,7 +150,7 @@ export default {
           y: '270B',
           z: 'E09B'
         },
-        {
+        3: {
           0: '1F302',
           1: '1F32C',
           2: '1F350',
@@ -187,7 +188,7 @@ export default {
           y: '270B',
           z: 'E09C'
         },
-        {
+        4: {
           0: '1F303',
           1: '1F32D',
           2: '1F351',
@@ -225,7 +226,7 @@ export default {
           y: '270B',
           z: 'E0A1'
         },
-        {
+        5: {
           0: '1F304',
           1: '1F32E',
           2: '1F352',
@@ -263,7 +264,7 @@ export default {
           y: '270B',
           z: 'E0A8'
         },
-        {
+        6: {
           0: '1F305',
           1: '1F32F',
           2: '1F353',
@@ -301,7 +302,7 @@ export default {
           y: '270C',
           z: 'E0AA'
         },
-        {
+        7: {
           0: '1F306',
           1: '1F330',
           2: '1F354',
@@ -339,7 +340,7 @@ export default {
           y: '270C',
           z: 'E0AB'
         },
-        {
+        8: {
           0: '1F307',
           1: '1F331',
           2: '1F355',
@@ -377,7 +378,7 @@ export default {
           y: '270C',
           z: 'E0AC'
         },
-        {
+        9: {
           0: '1F308',
           1: '1F332',
           2: '1F356',
@@ -415,7 +416,7 @@ export default {
           y: '270C',
           z: 'E0AC'
         },
-        {
+        a: {
           0: '1F309',
           1: '1F333',
           2: '1F357',
@@ -453,7 +454,7 @@ export default {
           y: '270C',
           z: 'E0AD'
         },
-        {
+        b: {
           0: '1F30A',
           1: '1F334',
           2: '1F358',
@@ -491,7 +492,7 @@ export default {
           y: '270C',
           z: 'E0AD'
         },
-        {
+        c: {
           0: '1F30B',
           1: '1F335',
           2: '1F359',
@@ -529,7 +530,7 @@ export default {
           y: '270D',
           z: 'E0B1'
         },
-        {
+        d: {
           0: '1F30C',
           1: '1F336',
           2: '1F35A',
@@ -567,7 +568,7 @@ export default {
           y: '270D',
           z: 'E0B2'
         },
-        {
+        e: {
           0: '1F311',
           1: '1F337',
           2: '1F35B',
@@ -605,7 +606,7 @@ export default {
           y: '270D',
           z: 'E0C0'
         },
-        {
+        f: {
           0: '1F312',
           1: '1F338',
           2: '1F35C',
@@ -643,7 +644,7 @@ export default {
           y: '270D',
           z: 'E0C2'
         },
-        {
+        g: {
           0: '1F313',
           1: '1F339',
           2: '1F35D',
@@ -681,7 +682,7 @@ export default {
           y: '270D',
           z: 'E0C3'
         },
-        {
+        h: {
           0: '1F314',
           1: '1F33A',
           2: '1F35E',
@@ -719,7 +720,7 @@ export default {
           y: '270D',
           z: 'E0C4'
         },
-        {
+        i: {
           0: '1F315',
           1: '1F33B',
           2: '1F35F',
@@ -757,7 +758,7 @@ export default {
           y: '270F',
           z: 'E0C5'
         },
-        {
+        j: {
           0: '1F316',
           1: '1F33C',
           2: '1F360',
@@ -795,7 +796,7 @@ export default {
           y: '2712',
           z: 'E0C6'
         },
-        {
+        k: {
           0: '1F317',
           1: '1F33D',
           2: '1F361',
@@ -833,7 +834,7 @@ export default {
           y: '2728',
           z: 'E1C4'
         },
-        {
+        l: {
           0: '1F318',
           1: '1F33E',
           2: '1F362',
@@ -871,7 +872,7 @@ export default {
           y: '2744',
           z: 'E1C7'
         },
-        {
+        m: {
           0: '1F319',
           1: '1F33F',
           2: '1F363',
@@ -909,7 +910,7 @@ export default {
           y: '274C',
           z: 'E1CA'
         },
-        {
+        n: {
           0: '1F31A',
           1: '1F340',
           2: '1F364',
@@ -947,7 +948,7 @@ export default {
           y: '27B0',
           z: 'E20B'
         },
-        {
+        o: {
           0: '1F31B',
           1: '1F341',
           2: '1F365',
@@ -985,7 +986,7 @@ export default {
           y: '27BF',
           z: 'E20D'
         },
-        {
+        p: {
           0: '1F31C',
           1: '1F342',
           2: '1F366',
@@ -1023,7 +1024,7 @@ export default {
           y: '2B50',
           z: 'E24C'
         },
-        {
+        q: {
           0: '1F31D',
           1: '1F343',
           2: '1F367',
@@ -1061,7 +1062,7 @@ export default {
           y: '2B55',
           z: 'E2C8'
         },
-        {
+        r: {
           0: '1F31E',
           1: '1F344',
           2: '1F368',
@@ -1099,7 +1100,7 @@ export default {
           y: '2BEA',
           z: 'E2CB'
         },
-        {
+        s: {
           0: '1F31F',
           1: '1F345',
           2: '1F369',
@@ -1137,7 +1138,7 @@ export default {
           y: 'E000',
           z: 'E2CD'
         },
-        {
+        t: {
           0: '1F320',
           1: '1F346',
           2: '1F36A',
@@ -1175,7 +1176,7 @@ export default {
           y: 'E001',
           z: 'E2CE'
         },
-        {
+        u: {
           0: '1F321',
           1: '1F347',
           2: '1F36B',
@@ -1213,7 +1214,7 @@ export default {
           y: 'E003',
           z: 'E2CF'
         },
-        {
+        v: {
           0: '1F324',
           1: '1F348',
           2: '1F36C',
@@ -1251,7 +1252,7 @@ export default {
           y: 'E004',
           z: 'E2D4'
         },
-        {
+        w: {
           0: '1F325',
           1: '1F349',
           2: '1F36D',
@@ -1289,7 +1290,7 @@ export default {
           y: 'E005',
           z: 'E342'
         },
-        {
+        x: {
           0: '1F326',
           1: '1F34A',
           2: '1F36E',
@@ -1327,7 +1328,7 @@ export default {
           y: 'E006',
           z: 'E343'
         },
-        {
+        y: {
           0: '1F327',
           1: '1F34B',
           2: '1F36F',
@@ -1365,7 +1366,7 @@ export default {
           y: 'E007',
           z: 'E344'
         },
-        {
+        z: {
           0: '1F328',
           1: '1F34C',
           2: '1F370',
@@ -1403,7 +1404,7 @@ export default {
           y: 'E008',
           z: 'E345'
         }
-      ],
+      },
       currentScale: 2,
       scale: [256 / 36, 256 / 1296, 256 / 46656, 256 / 1679616],
       bounds: {
@@ -1905,17 +1906,11 @@ export default {
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
           y = y.toFixed(4)
-          coordsLabel.innerHTML = `X: ${x}  Y: ${y}<BR/> sqID.x: ${this.findSqIDByWorldCoords(
-            x
-          )} sqID.y: ${this.findSqIDByWorldCoords(y).toString(
-            36
-          )}<BR/>${String.fromCodePoint(
-            `0x${
-              this.emojiIndexReference[this.findSqIDByWorldCoords(x) + 1][
-                this.findSqIDByWorldCoords(y).toString(36)
-              ]
-            }`
-          )}`
+          coordsLabel.innerHTML = `X: ${x}  Y: ${y}<BR/> sqID.x: ${(
+            this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
+          ).toString(36)} sqID.y: ${(
+            this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
+          ).toString(36)}<BR/>${this.getEmojiLocation(x, y)}`
         })
 
         map.addListener('bounds_changed', () => {
@@ -1964,6 +1959,35 @@ export default {
       })
       this.canvas.width = this.gmap.offsetWidth
     },
+    getEmojiLocation(x, y) {
+      // this.emojiLocation = `${String.fromCodePoint(
+      //   `0x${
+      //     this.emojiIndexReference[
+      //       (this.findSqIDByWorldCoords(x) + 1) /
+      //         Math.pow(36, this.currentScale)
+      //     ][
+      //       (
+      //         this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
+      //       ).toString(36)
+      //     ]
+      //   }`
+      // )}, `
+      this.emojiLocation = ''
+      const xEmojiLoc = (
+        this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
+      ).toString(36)
+      const yEmojiLoc = (
+        this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
+      ).toString(36)
+      for (let i = 0; i < yEmojiLoc.length; i++) {
+        if (yEmojiLoc[i] !== '.') {
+          this.emojiLocation += `${String.fromCodePoint(
+            `0x${this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]}`
+          )} `
+        }
+      }
+      return this.emojiLocation
+    },
     // eslint-disable-next-line max-statements
     boundWorld(map) {
       if (this.bounds.ne.y < 0 || this.bounds.sw.y > 256) {
@@ -1972,7 +1996,10 @@ export default {
       }
     },
     findSqIDByWorldCoords(wCoords) {
-      return Math.floor(wCoords / this.scale[this.currentScale]) % 36
+      return Math.floor(wCoords / this.scale[this.currentScale])
+    },
+    findSqIDByWorldCoordsMod36(wCoords) {
+      return this.findSqIDByWorldCoords(wCoords) % 36
     },
     fixedZooms(map) {
       if (this.zoom > map.getZoom()) {
@@ -2010,31 +2037,35 @@ export default {
     drawEmojis(nextLineDist) {
       console.log(`nextLineDist: ${nextLineDist}`)
       const sqID = {
-        x: this.findSqIDByWorldCoords(this.bounds.sw.x),
+        x: this.findSqIDByWorldCoordsMod36(this.bounds.sw.x),
         // (this.bounds.sw.x + this.firstLatLineInPx() / pxPerCoord) /
         // this.scale[this.currentScale],
-        y: this.findSqIDByWorldCoords(this.bounds.ne.y)
+        y: this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
         //     (this.bounds.ne.y + this.firstLngLineInPx() / pxPerCoord) /
         //     this.scale[this.currentScale]
       }
-      this.ctx.font = '12px OpenMojiColor'
+      this.ctx.font = '12px Serif'
       for (let i = 0; i < this.canvas.width; i += nextLineDist) {
         if (sqID.x < 35) {
           sqID.x++
         } else {
           sqID.x = 0
         }
-        sqID.y = this.findSqIDByWorldCoords(this.bounds.ne.y)
+        sqID.y = this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
         // console.log(sqID.y.toString(36))
         for (let j = 0; j < this.canvas.height; j += nextLineDist) {
           this.ctx.fillText(
             String.fromCodePoint(
-              `0x${this.emojiIndexReference[sqID.x][sqID.y.toString(36)]}`
+              `0x${
+                this.emojiIndexReference[sqID.x.toString(36)][
+                  sqID.y.toString(36)
+                ]
+              }`
             ),
             this.firstLatLineInPx() - nextLineDist + i,
             this.firstLngLineInPx() - nextLineDist + j + 12
           )
-          // console.log(sqID.y.toString(36))
+          console.log(sqID.y.toString(36))
           if (sqID.y < 35) {
             sqID.y++
           } else {
@@ -2076,7 +2107,7 @@ export default {
       ) {
         // console.log(`round: ${this.firstLatLineInPx()}`)
         this.ctx.moveTo(i, 0)
-        this.ctx.lineTo(i, 400)
+        this.ctx.lineTo(i, this.canvas.height)
       }
     },
     drawLng(emojis) {
@@ -2178,7 +2209,8 @@ export default {
 
 <style scoped>
 #emoji-map {
-  width: 600px; /* calc(100vw - 60px);*/
+  /* width: calc(100vw - 60px); */
+  width: 600px;
   border: 2px dashed orange;
   color: white;
   pointer-events: none;
@@ -2192,9 +2224,11 @@ export default {
   position: relative;
   left: calc((100vw - 600px) / 2 - 30px);
   height: 400px;
+  /* width: calc(100vw - 60px); */
 }
 #g-map {
   width: 600px;
+  /* width: calc(100vw - 60px); */
 }
 #tdCursor {
   /* font-family: 'OpenMojiColor'; */
