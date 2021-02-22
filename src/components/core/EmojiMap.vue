@@ -1929,17 +1929,13 @@ export default {
             // this.noNegCoords(map)
             this.mercCoords(map)
             this.mapCoordSize.width =
-              Math.abs(
-                (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
-              ) >=
-              256 / 2
-                ? 256 -
-                  Math.abs(
-                    (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
-                  )
-                : Math.abs(
-                    (this.bounds.ne.x / 256 - this.bounds.sw.x / 256) * 256
-                  )
+              this.bounds.sw.x < this.bounds.ne.x
+                ? Math.abs(this.bounds.ne.x - this.bounds.sw.x)
+                : Math.abs(this.bounds.ne.x + (256 - this.bounds.sw.x))
+            // this.mapCoordSize.width = Math.round(this.mapCoordSize.width)
+
+            console.log(this.mapCoordSize.width)
+
             this.mapCoordSize.height = Math.abs(
               this.bounds.sw.y - this.bounds.ne.y
             )
@@ -2207,8 +2203,8 @@ export default {
 
 <style scoped>
 #emoji-map {
-  /* width: calc(100vw - 60px); */
-  width: 600px;
+  width: calc(100vw - 60px);
+  /* width: 600px; */
   border: 2px dashed orange;
   color: white;
   pointer-events: none;
@@ -2220,13 +2216,13 @@ export default {
 }
 .map {
   position: relative;
-  left: calc((100vw - 600px) / 2 - 30px);
+  left: 0px;
   height: 400px;
-  /* width: calc(100vw - 60px); */
+  width: calc(100vw - 60px);
 }
 #g-map {
-  width: 600px;
-  /* width: calc(100vw - 60px); */
+  /* width: 600px; */
+  width: calc(100vw - 60px);
 }
 #tdCursor {
   /* font-family: 'OpenMojiColor'; */
