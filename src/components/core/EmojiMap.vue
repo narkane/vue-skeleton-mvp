@@ -21,8 +21,9 @@
         @click="center = m.position"
       ></gmap-marker>
     </gmap-map>
-    <v-btn color="primary" rounded @click="toggleEmojis"
-      >Emojis {{ emojiToggle }}</v-btn
+    <br />
+    <v-btn id="emoji-button" color="#335977" @click="toggleEmojis"
+      >&#x1F642; {{ emojiToggle }}</v-btn
     >
   </div>
 </template>
@@ -35,6 +36,7 @@ import { gmapApi } from 'vue2-google-maps'
 // what3words.setOptions({ key: process.env.VUE_APP_W3W_API_KEY })
 
 export default {
+  props: ['reqEmojiLoc'],
   data() {
     return {
       emojiLocation: '',
@@ -1877,11 +1879,48 @@ export default {
     google: gmapApi
   },
   mounted() {
-    this.geolocate()
+    // this.geolocate()
     // this.addMarker()
     this.init()
   },
   methods: {
+    convertEmojiInput(emojiInput) {
+      const reqLocation = {
+        lat: 0,
+        lng: 0
+      }
+      let one
+      let two
+      for (let i = 0; i < emojiInput.length; i += 2) {
+        console.log(JSON.stringify(emojiInput))
+        const emojiCharUnicode = emojiInput
+          .codePointAt(i)
+          .toString(16)
+          .toUpperCase()
+        // console.log(emojiCharUnicode)
+        for (const key in this.emojiIndexReference) {
+          for (const secondKey in this.emojiIndexReference[key]) {
+            if (
+              this.emojiIndexReference[key][secondKey].match(emojiCharUnicode)
+            ) {
+              one = key
+              two = secondKey
+              // console.log(
+              //   'keys: ' + parseInt(key, 36) + ', ' + parseInt(secondKey, 36)
+              // )
+              // console.log('loc: ' + JSON.stringify(reqLocation))
+            }
+          }
+        }
+        reqLocation.lng += this.scale[i / 2] * (360 / 256) * parseInt(one, 36)
+        reqLocation.lat += this.scale[i / 2] * parseInt(two, 36)
+      }
+      // console.log(`fdsafsda ${reqLocation.lat}`)
+      reqLocation.lng -= 180
+      // reqLocation.lat += this.mapCoordSize.height / 2
+      // console.log(`DOGDOCK: ${JSON.stringify(reqLocation)}`)
+      return reqLocation
+    },
     noNegCoords(map) {
       this.bounds.ne.lat = 180 - (map.getBounds().getNorthEast().lat() + 90)
       this.bounds.sw.lat = 180 - (map.getBounds().getSouthWest().lat() + 90)
@@ -1900,18 +1939,24 @@ export default {
       // this.mouseCheck()
 
       this.$refs.mapRef.$mapPromise.then((map) => {
+        map.set('disableDefaultUI', true)
+        // const proj = map.getProjection()
         map.addListener('mousemove', (event) => {
           const coordsLabel = document.getElementById('tdCursor')
           let x = this.mercatorProject(event.latLng).x
+          const xC = event.latLng.lng()
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
+          const yC = event.latLng.lat()
           y = y.toFixed(4)
           coordsLabel.innerHTML =
-            // `X: ${x}  Y: ${y}<BR/> sqID.x: ${(
+            // `X: ${xC}  Y: ${yC}
+            // <BR/> x: ${x}, y: ${y}` +
+            // `sqID.x: ${(
             //   this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
             // ).toString(36)} sqID.y: ${(
             //   this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
-            // ).toString(36)}<BR/>
+            // ).toString(36)}<BR/>` +
             `${this.getEmojiLocation(x, y)}`
         })
 
@@ -1939,6 +1984,7 @@ export default {
             this.mapCoordSize.height = Math.abs(
               this.bounds.sw.y - this.bounds.ne.y
             )
+            console.log(this.mapCoordSize.height)
 
             if (this.canvas.getContext) {
               this.drawGrid()
@@ -1953,23 +1999,52 @@ export default {
             }
           }
         })
+        this.google.maps.event.addListenerOnce(
+          map,
+          'projection_changed',
+          () => {
+            if (this.$route.params.emojiCode) {
+              this.center = this.convertEmojiInput(this.$route.params.emojiCode)
+              this.zoomByEmojiLength(
+                map,
+                Math.ceil(this.$route.params.emojiCode.length / 2)
+              )
+              this.center.lat = map
+                .getProjection()
+                .fromPointToLatLng(
+                  new this.google.maps.Point(this.center.lng, this.center.lat)
+                )
+                .lat()
+              console.log(`center: ${JSON.stringify(this.center)}`)
+            }
+            map.setCenter(this.center)
+            console.log(map.getCenter().lat(), map.getCenter().lng())
+          }
+        )
       })
+      this.canvas.height = this.gmap.offsetHeight
       this.canvas.width = this.gmap.offsetWidth
     },
     getEmojiLocation(x, y) {
       this.emojiLocation = ''
-      const xEmojiLoc = (
+      let xEmojiLoc = (
         this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
       ).toString(36)
-      const yEmojiLoc = (
+      let yEmojiLoc = (
         this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
       ).toString(36)
-      for (let i = 0; i < yEmojiLoc.length; i++) {
-        if (yEmojiLoc[i] !== '.') {
-          this.emojiLocation += `${String.fromCodePoint(
-            `0x${this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]}`
-          )}`
+      xEmojiLoc = xEmojiLoc.replace('.', '')
+      yEmojiLoc = yEmojiLoc.replace('.', '')
+      for (let i = 0; i <= this.breakLayer(this.zoom); i++) {
+        if (xEmojiLoc[i] === undefined) {
+          xEmojiLoc += 0
         }
+        if (yEmojiLoc[i] === undefined) {
+          yEmojiLoc += 0
+        }
+        this.emojiLocation += `${String.fromCodePoint(
+          `0x${this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]}`
+        )}`
       }
       return this.emojiLocation
     },
@@ -2008,6 +2083,20 @@ export default {
           map.setZoom(21)
         }
       }
+    },
+    zoomByEmojiLength(map, len) {
+      this.currentScale = len - 1
+      console.log(len)
+      if (len === 1) {
+        map.setZoom(3)
+      } else if (len === 2) {
+        map.setZoom(7)
+      } else if (len === 3) {
+        map.setZoom(12)
+      } else if (len === 4) {
+        map.setZoom(18)
+      }
+      this.zoom = map.getZoom()
     },
     breakLayer(gZoom) {
       if (gZoom < 7) {
@@ -2057,8 +2146,8 @@ export default {
                   ]
                 }`
               ),
-              this.firstLatLineInPx() - nextLineDist / 2 + i - 7,
-              this.firstLngLineInPx() - nextLineDist / 2 + j + 4
+              this.firstLatLineInPx() - nextLineDist + i - 7,
+              this.firstLngLineInPx() - nextLineDist + j + 4
             )
             if (sqID.y < 35) {
               sqID.y++
@@ -2108,7 +2197,7 @@ export default {
       }
     },
     drawLng(emojis) {
-      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
       for (
         let i = this.firstLngLineInPx();
         i < this.canvas.height;
@@ -2201,31 +2290,57 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
 #emoji-map {
+  height: calc(100vh - 260px);
   width: calc(100vw - 60px);
   /* width: 600px; */
-  border: 2px dashed orange;
+  /* border: 25px solid rgb(18, 18, 18); */
+  /* border-radius: 15px; */
+  /* border-right: 55px solid rgb(18, 18, 18);
+  border-left: 55px solid rgb(18, 18, 18); */
   color: white;
   pointer-events: none;
 }
 #zindex1 {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   pointer-events: none;
 }
 .map {
   position: relative;
+  /* border: 0px solid rgb(51, 89, 119); */
+  /* border-radius: 15px; */
+  top: -15px;
   left: 0px;
-  height: 400px;
+  height: calc(100vh - 260px);
   width: calc(100vw - 60px);
 }
 #g-map {
+  /* left: 0px; */
+  top: -15px;
   /* width: 600px; */
   width: calc(100vw - 60px);
 }
 #tdCursor {
   /* font-family: 'OpenMojiColor'; */
-  font-size: 24pt;
+  position: relative;
+  z-index: 2 !important;
+  font-size: 14pt;
+}
+#emoji-button {
+  height: 45px;
+  width: 75px;
+  z-index: 2;
+  border: 2px outset darkgray;
+  border-radius: 11px;
+  position: relative;
+  /* left: calc((-100vw / 2) + 78px); */
+  top: -20px;
+  color: yellow;
+  /* font-weight: 700; */
+}
+.v-navigation-drawer--absolute {
+  z-index: 10 !important;
 }
 </style>
