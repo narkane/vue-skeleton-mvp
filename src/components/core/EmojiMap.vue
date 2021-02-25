@@ -1,6 +1,5 @@
 <template>
   <div>
-    <div id="tdCursor">OurEarth.care</div>
     <div id="zindex1">
       <canvas class="map" id="emoji-map" width="600" height="400">
         Canvas isnt loading in your browser!
@@ -21,10 +20,14 @@
         @click="center = m.position"
       ></gmap-marker>
     </gmap-map>
-    <br />
-    <v-btn id="emoji-button" @click="toggleEmojis"
-      >&#x1F642; {{ emojiToggle }}</v-btn
-    >
+    <div>
+      <div id="tdCursor">OurEarth.care</div>
+      <!-- <br /> -->
+      <v-btn id="emoji-button" @click="toggleEmojis"
+        >&#x1F642; {{ emojiToggle }}</v-btn
+      >
+      <textarea id="link-area" />
+    </div>
   </div>
 </template>
 
@@ -1879,7 +1882,7 @@ export default {
     google: gmapApi
   },
   mounted() {
-    // this.geolocate()
+    this.geolocate()
     // this.addMarker()
     this.init()
   },
@@ -1891,34 +1894,22 @@ export default {
       }
       let one
       let two
-      for (let i = 0; i < emojiInput.length; i += 2) {
-        console.log(JSON.stringify(emojiInput))
-        const emojiCharUnicode = emojiInput
-        // .codePointAt(i)
-        // .toString(16)
-        // .toUpperCase()
-        // console.log(emojiCharUnicode)
+      for (let i = 0; i < [...emojiInput].length; i++) {
         for (const key in this.emojiIndexReference) {
           for (const secondKey in this.emojiIndexReference[key]) {
             if (
-              this.emojiIndexReference[key][secondKey].match(emojiCharUnicode)
+              this.emojiIndexReference[key][secondKey].match([...emojiInput][i])
             ) {
               one = key
               two = secondKey
-              // console.log(
-              //   'keys: ' + parseInt(key, 36) + ', ' + parseInt(secondKey, 36)
-              // )
-              // console.log('loc: ' + JSON.stringify(reqLocation))
             }
           }
         }
-        reqLocation.lng += this.scale[i / 2] * (360 / 256) * parseInt(one, 36)
-        reqLocation.lat += this.scale[i / 2] * parseInt(two, 36)
+        reqLocation.lng += this.scale[i] * (360 / 256) * parseInt(one, 36)
+        reqLocation.lat += this.scale[i] * parseInt(two, 36)
+        console.log(`${one}, ${two}`)
       }
-      // console.log(`fdsafsda ${reqLocation.lat}`)
       reqLocation.lng -= 180
-      // reqLocation.lat += this.mapCoordSize.height / 2
-      // console.log(`DOGDOCK: ${JSON.stringify(reqLocation)}`)
       return reqLocation
     },
     noNegCoords(map) {
@@ -1949,7 +1940,7 @@ export default {
           let y = this.mercatorProject(event.latLng).y
           const yC = event.latLng.lat()
           y = y.toFixed(4)
-          const eLoc = this.getEmojiLocation(x, y)
+          this.getEmojiLocation(x, y)
           coordsLabel.innerHTML =
             // `X: ${xC}  Y: ${yC}
             // <BR/> x: ${x}, y: ${y}` +
@@ -1958,9 +1949,9 @@ export default {
             // ).toString(36)} sqID.y: ${(
             //   this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
             // ).toString(36)}<BR/>` +
-            `<a href="http://www.ourearth.care/goto-emoji/${eLoc}">
-              ${eLoc}
-            </a>`
+            `${this.emojiLocation}`
+          const elinkArea = document.getElementById('link-area')
+          elinkArea.innerHTML = `http://www.ourearth.care/${this.emojiLocation}`
         })
 
         map.addListener('bounds_changed', () => {
@@ -2140,7 +2131,11 @@ export default {
         this.ctx.font = '12px Serif'
         for (let i = 0; i < this.canvas.width; i += nextLineDist) {
           sqID.y = this.findSqIDByWorldCoordsMod36(this.bounds.ne.y)
-          for (let j = 0; j < this.canvas.height; j += nextLineDist) {
+          for (
+            let j = 0;
+            j < this.canvas.height + nextLineDist;
+            j += nextLineDist
+          ) {
             this.ctx.fillText(
               // String.fromCodePoint(
               `${
@@ -2293,13 +2288,16 @@ export default {
 </script>
 
 <style>
+html {
+  overflow: hidden;
+}
 #emoji-map {
   height: calc(100vh - 260px);
-  width: calc(100vw - 60px);
+  width: calc(100vw);
   /* width: 600px; */
-  border: 3px solid rgb(18, 18, 18);
+  /* border: 3px solid rgb(18, 18, 18); */
   /* border: 3px inset rgb(51, 89, 119); */
-  border-radius: 15px;
+  /* border-radius: 15px; */
   /* border-right: 55px solid rgb(18, 18, 18);
   border-left: 55px solid rgb(18, 18, 18); */
   color: white;
@@ -2312,45 +2310,76 @@ export default {
 }
 .map {
   position: relative;
-  border: 1px inset rgb(51, 89, 119);
-  border-radius: 15px;
-  top: -15px;
+  /* border: 1px inset rgb(51, 89, 119); */
+  /* border-radius: 15px; */
+  top: 0px;
   left: 0px;
-  height: calc(100vh - 260px);
-  width: calc(100vw - 60px);
+  /* height: calc(100vh - 260px); */
+  /* width: calc(100vw); */
 }
 #g-map {
-  top: -12px;
-  left: 3px;
-  height: calc(100vh - 266px);
-  width: calc(100vw - 66px);
+  top: 0px;
+  left: 0px;
+  height: calc(100vh - 260px);
+  width: calc(100vw);
 }
 #tdCursor {
-  width: 200px;
+  width: 250px;
   /* font-family: 'OpenMojiColor'; */
   position: relative;
-  top: 10px;
-  left: calc(50vw - 140px);
-  z-index: 2 !important;
+  top: 0px;
+  left: calc(50vw - 125px);
+  z-index: 3 !important;
   font-size: 24pt;
   background: rgb(233, 180, 40);
   border: 4px groove rgb(255, 202, 80);
   border-radius: 15px;
 }
 #emoji-button {
-  height: 45px;
+  height: 25px;
   width: 75px;
-  z-index: 2;
-  border: 4px groove rgb(255, 202, 80);
-  border-radius: 15px;
+  /* z-index: 2; */
+  border: 2px groove rgb(255, 232, 90);
+  border-radius: 6px;
   position: relative;
-  left: -7px;
-  top: -50px;
-  background: rgb(233, 180, 40);
+  left: 120px;
+  top: -37px;
+  background: rgb(223, 200, 60);
   /* color: yellow; */
   /* font-weight: 700; */
 }
+#link-area {
+  font-size: 10pt;
+  position: relative;
+  top: -51px;
+  left: -38px;
+  z-index: 1;
+  text-align: center;
+  padding-top: 50px;
+  /* padding-right: 10px; */
+  background: rgb(255, 244, 180);
+  height: 80px;
+  border: 3px groove rgb(255, 225, 100);
+  border-radius: 6px;
+  width: calc(240px);
+  color: black;
+  transform-origin: top;
+  transition: transform 750ms ease-out;
+  -moz-transform: transform 750ms ease-out;
+  -webkit-transition: transform 750ms ease-out;
+  transform: scaleY(0);
+  resize: none;
+}
+#tdCursor:hover ~ #link-area {
+  transform: scaleY(1);
+}
+#link-area:hover {
+  transform: scaleY(1);
+}
 .v-navigation-drawer--absolute {
   z-index: 10 !important;
+}
+.container {
+  padding: 0 !important;
 }
 </style>
