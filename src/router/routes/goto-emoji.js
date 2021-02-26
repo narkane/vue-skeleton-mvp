@@ -1,6 +1,6 @@
 export default [
   {
-    path: '/goto-emoji/:emojiCode',
+    path: '/:emojiCode',
     name: 'goto-emoji',
     // meta: {
     //   requiresAuth: false
