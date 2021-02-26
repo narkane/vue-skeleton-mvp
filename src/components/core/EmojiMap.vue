@@ -20,7 +20,7 @@
         @click="center = m.position"
       ></gmap-marker>
     </gmap-map>
-    <div>
+    <div id="ui">
       <div id="tdCursor">OurEarth.care</div>
       <!-- <br /> -->
       <v-btn id="emoji-button" @click="toggleEmojis"
@@ -2323,6 +2323,10 @@ html {
   height: calc(100vh - 260px);
   width: calc(100vw);
 }
+#ui {
+  position: relative;
+  top: 15px;
+}
 #tdCursor {
   width: 250px;
   /* font-family: 'OpenMojiColor'; */
@@ -2336,15 +2340,15 @@ html {
   border-radius: 15px;
 }
 #emoji-button {
-  height: 25px;
+  height: 36px;
   width: 75px;
   /* z-index: 2; */
-  border: 2px groove rgb(255, 232, 90);
-  border-radius: 6px;
   position: relative;
-  left: 120px;
-  top: -37px;
-  background: rgb(223, 200, 60);
+  left: 295px;
+  top: -105px;
+  background: rgb(233, 180, 40);
+  border: 3px groove rgb(255, 202, 80);
+  border-radius: 10px;
   /* color: yellow; */
   /* font-weight: 700; */
 }
