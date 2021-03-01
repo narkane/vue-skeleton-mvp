@@ -20,13 +20,37 @@
         @click="center = m.position"
       ></gmap-marker>
     </gmap-map>
+
     <div id="ui">
-      <div id="tdCursor">OurEarth.care</div>
-      <!-- <br /> -->
-      <v-btn id="emoji-button" @click="toggleEmojis"
-        >&#x1F642; {{ emojiToggle }}</v-btn
-      >
-      <textarea id="link-area" />
+      <!-- <div id="vert"><div style="width: 36px" /></div> -->
+      <div id="vert">
+        <v-btn class="ui-component" id="emoji-button" @click="toggleEmojis"
+          >&#x1F642;</v-btn
+        >
+      </div>
+      <div id="vert">
+        <div class="ui-component theme--dark v-btn" id="tdCursor">O E C</div>
+        <textarea id="link-area" spellcheck="false">
+          http://www.ourearth.care/
+        </textarea>
+      </div>
+      <div id="vert">
+        <v-btn
+          class="ui-component zoom"
+          @click="zoomIn"
+          style="
+            border-bottom: 1px solid #121212;
+            border-radius: 3px 3px 0px 0px;
+          "
+          >+</v-btn
+        >
+        <v-btn
+          class="ui-component zoom"
+          @click="zoomOut"
+          style="border-radius: 0px 0px 3px 3px"
+          >-</v-btn
+        >
+      </div>
     </div>
   </div>
 </template>
@@ -35,13 +59,16 @@
 import { gmapApi } from 'vue2-google-maps'
 
 // const what3words = require('@what3words/api')
-
 // what3words.setOptions({ key: process.env.VUE_APP_W3W_API_KEY })
 
 export default {
   props: ['reqEmojiLoc'],
   data() {
     return {
+      canvas: null,
+      ctx: null,
+      map: null,
+      // gmap: null,
       emojiLocation: '',
       emojiToggle: 'Off',
       emojiIndexReference: {
@@ -1414,8 +1441,16 @@ export default {
           z: '🐊'
         }
       },
+      minZoomLevel: 3,
+      zoom: null,
       currentScale: 2,
       scale: [256 / 36, 256 / 1296, 256 / 46656, 256 / 1679616],
+      center: { lat: 45, lng: -73.587 },
+      markers: [],
+      places: [],
+      currentPlace: null,
+      // rectOptions: null,
+      tileSize: 256,
       bounds: {
         ne: {
           lat: null,
@@ -1435,19 +1470,6 @@ export default {
         dir: -1,
         oldX: 0
       },
-      // default to Montreal
-      // change this to whatever makes sense
-      center: { lat: 45, lng: -73.587 },
-      markers: [],
-      places: [],
-      currentPlace: null,
-      canvas: null,
-      ctx: null,
-      gmap: null,
-      zoom: null,
-      minZoomLevel: 3,
-      rectOptions: null,
-      tileSize: 256,
       mapStyleList: {
         retro: [
           {
@@ -1878,67 +1900,32 @@ export default {
       }
     }
   },
-  computed: {
-    google: gmapApi
-  },
   mounted() {
     this.geolocate()
     // this.addMarker()
     this.init()
   },
   methods: {
-    convertEmojiInput(emojiInput) {
-      const reqLocation = {
-        lat: 0,
-        lng: 0
-      }
-      let one
-      let two
-      for (let i = 0; i < [...emojiInput].length; i++) {
-        for (const key in this.emojiIndexReference) {
-          for (const secondKey in this.emojiIndexReference[key]) {
-            if (
-              this.emojiIndexReference[key][secondKey].match([...emojiInput][i])
-            ) {
-              one = key
-              two = secondKey
-            }
-          }
-        }
-        reqLocation.lng += this.scale[i] * (360 / 256) * parseInt(one, 36)
-        reqLocation.lat += this.scale[i] * parseInt(two, 36)
-        console.log(`${one}, ${two}`)
-      }
-      reqLocation.lng -= 180
-      return reqLocation
-    },
-    noNegCoords(map) {
-      this.bounds.ne.lat = 180 - (map.getBounds().getNorthEast().lat() + 90)
-      this.bounds.sw.lat = 180 - (map.getBounds().getSouthWest().lat() + 90)
-      this.bounds.ne.lng = map.getBounds().getNorthEast().lng() + 180
-      this.bounds.sw.lng = map.getBounds().getSouthWest().lng() + 180
-    },
-    mercCoords(map) {
-      this.bounds.ne = this.mercatorProject(map.getBounds().getNorthEast())
-      this.bounds.sw = this.mercatorProject(map.getBounds().getSouthWest())
-    },
     init() {
-      this.gmap = document.getElementById('g-map')
       this.canvas = document.getElementById('emoji-map')
       this.ctx = this.canvas.getContext('2d')
+      const googleMapElement = document.getElementById('g-map')
 
       // this.mouseCheck()
 
       this.$refs.mapRef.$mapPromise.then((map) => {
+        this.map = map
+
+        // console.log(map.getUiSettings)
         map.set('disableDefaultUI', true)
-        // const proj = map.getProjection()
+
         map.addListener('mousemove', (event) => {
           const coordsLabel = document.getElementById('tdCursor')
           let x = this.mercatorProject(event.latLng).x
-          const xC = event.latLng.lng()
+          // const xC = event.latLng.lng()
           x = x.toFixed(4)
           let y = this.mercatorProject(event.latLng).y
-          const yC = event.latLng.lat()
+          // const yC = event.latLng.lat()
           y = y.toFixed(4)
           this.getEmojiLocation(x, y)
           coordsLabel.innerHTML =
@@ -1956,97 +1943,71 @@ export default {
 
         map.addListener('bounds_changed', () => {
           // Limit the north/south pole max bounds of map
-          this.boundWorld(map)
-          // Limit the zoom level by gmaps zoom
-          this.currentScale = this.breakLayer(map.getZoom())
-          if (map.getZoom() < this.minZoomLevel) {
-            map.setZoom(this.minZoomLevel)
-          } else {
-            this.fixedZooms(map)
-            this.zoom = map.getZoom()
-            // set bounds
-            // this.noNegCoords(map)
-            this.mercCoords(map)
-            this.mapCoordSize.width =
-              this.bounds.sw.x < this.bounds.ne.x
-                ? Math.abs(this.bounds.ne.x - this.bounds.sw.x)
-                : Math.abs(this.bounds.ne.x + (256 - this.bounds.sw.x))
-            // this.mapCoordSize.width = Math.round(this.mapCoordSize.width)
+          // by recentering map when app attempts to leave google
+          // maps' north/south pole limits/boundries
+          this.boundWorld()
 
-            console.log(this.mapCoordSize.width)
+          // Set the maps current grid scale factor by google maps' current zoom
+          this.currentScale = this.breakLayer()
 
-            this.mapCoordSize.height = Math.abs(
-              this.bounds.sw.y - this.bounds.ne.y
+          // Use a Mercator Projection to cast this.bounds values to google
+          // maps' equivalent "World Coordinates" values
+          this.mercCoords(map)
+
+          this.mapCoordSize.width =
+            this.bounds.sw.x < this.bounds.ne.x
+              ? Math.abs(this.bounds.ne.x - this.bounds.sw.x)
+              : Math.abs(this.bounds.ne.x + (256 - this.bounds.sw.x))
+          // this.mapCoordSize.width = Math.round(this.mapCoordSize.width)
+
+          // console.log(this.mapCoordSize.width)
+
+          this.mapCoordSize.height = Math.abs(
+            this.bounds.sw.y - this.bounds.ne.y
+          )
+          // console.log(this.mapCoordSize.height)
+
+          if (this.canvas.getContext) {
+            this.drawGrid()
+            this.drawEmojis(
+              (this.scale[this.currentScale] * this.canvas.width) /
+                this.mapCoordSize.width
             )
-            console.log(this.mapCoordSize.height)
-
-            if (this.canvas.getContext) {
-              this.drawGrid()
-              this.drawEmojis(
-                (this.scale[this.currentScale] * this.canvas.width) /
-                  this.mapCoordSize.width
-              )
-            } else {
-              // canvas unsupported
-              // eslint-disable-next-line no-alert
-              alert('CANVAS UNSUPPORTED!')
-            }
+          } else {
+            // canvas unsupported
+            // eslint-disable-next-line no-alert
+            alert('CANVAS UNSUPPORTED!')
           }
         })
+
+        // Run once after map is fully loaded with projection
         this.google.maps.event.addListenerOnce(
           map,
           'projection_changed',
           () => {
+            // Initialize zoom at the minimum zoom level at beginning of app
+            this.zoom = this.minZoomLevel
+
+            // If an emojiCode exists in URL then handle with this.convertEmojiInput
             if (this.$route.params.emojiCode) {
-              this.center = this.convertEmojiInput(this.$route.params.emojiCode)
-              this.zoomByEmojiLength(
-                map,
-                Math.ceil(this.$route.params.emojiCode.length / 2)
+              this.convertEmojiInput(this.$route.params.emojiCode)
+              console.log(
+                `converted emoji input: ${map.getCenter().lat()}`,
+                map.getCenter().lng()
               )
-              this.center.lat = map
-                .getProjection()
-                .fromPointToLatLng(
-                  new this.google.maps.Point(this.center.lng, this.center.lat)
-                )
-                .lat()
-              console.log(`center: ${JSON.stringify(this.center)}`)
             }
-            map.setCenter(this.center)
-            console.log(map.getCenter().lat(), map.getCenter().lng())
           }
         )
       })
-      this.canvas.height = this.gmap.offsetHeight
-      this.canvas.width = this.gmap.offsetWidth
-    },
-    getEmojiLocation(x, y) {
-      this.emojiLocation = ''
-      let xEmojiLoc = (
-        this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
-      ).toString(36)
-      let yEmojiLoc = (
-        this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
-      ).toString(36)
-      xEmojiLoc = xEmojiLoc.replace('.', '')
-      yEmojiLoc = yEmojiLoc.replace('.', '')
-      for (let i = 0; i <= this.breakLayer(this.zoom); i++) {
-        if (xEmojiLoc[i] === undefined) {
-          xEmojiLoc += 0
-        }
-        if (yEmojiLoc[i] === undefined) {
-          yEmojiLoc += 0
-        }
-        this.emojiLocation += `${
-          this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]
-        }`
-      }
-      return this.emojiLocation
+
+      this.canvas.height = googleMapElement.offsetHeight
+      this.canvas.width = googleMapElement.offsetWidth
     },
     // eslint-disable-next-line max-statements
-    boundWorld(map) {
+    boundWorld() {
       if (this.bounds.ne.y < 0 || this.bounds.sw.y > 256) {
         // still within valid bounds, so save the last valid position
-        map.panTo(this.center)
+        this.map.panTo(this.center)
       }
     },
     findSqIDByWorldCoords(wCoords) {
@@ -2055,49 +2016,56 @@ export default {
     findSqIDByWorldCoordsMod36(wCoords) {
       return this.findSqIDByWorldCoords(wCoords) % 36
     },
-    fixedZooms(map) {
-      if (this.zoom > map.getZoom()) {
-        if (map.getZoom() === 6) {
-          map.setZoom(5)
-        } else if (map.getZoom() === 11) {
-          map.setZoom(10)
-        } else if (map.getZoom() === 17) {
-          map.setZoom(16)
-        } else if (map.getZoom() === 22) {
-          map.setZoom(21)
+    zoomIn() {
+      this.zoom++
+    },
+    zoomOut() {
+      this.zoom--
+    },
+    fixedZooms(val) {
+      if (val < this.map.getZoom()) {
+        if (val === 6) {
+          val = 5
+        } else if (val === 11) {
+          val = 10
+        } else if (val === 17) {
+          val = 16
+        } else if (val === 22) {
+          val = 21
         }
-      } else if (this.zoom < map.getZoom()) {
-        if (map.getZoom() === 6) {
-          map.setZoom(7)
-        } else if (map.getZoom() === 11) {
-          map.setZoom(12)
-        } else if (map.getZoom() === 17) {
-          map.setZoom(18)
-        } else if (map.getZoom() === 22) {
-          map.setZoom(21)
+      } else if (val > this.map.getZoom()) {
+        if (val === 6) {
+          val = 7
+        } else if (val === 11) {
+          val = 12
+        } else if (val === 17) {
+          val = 18
+        } else if (val === 22) {
+          val = 21
         }
       }
+      this.zoom = val
+      this.map.setZoom(this.zoom)
     },
-    zoomByEmojiLength(map, len) {
+    setZoomByEmojiLength(len) {
       this.currentScale = len - 1
-      console.log(len)
+      // console.log(len)
       if (len === 1) {
-        map.setZoom(3)
+        this.zoom = 3
       } else if (len === 2) {
-        map.setZoom(7)
+        this.zoom = 7
       } else if (len === 3) {
-        map.setZoom(12)
+        this.zoom = 12
       } else if (len === 4) {
-        map.setZoom(18)
+        this.zoom = 18
       }
-      this.zoom = map.getZoom()
     },
-    breakLayer(gZoom) {
-      if (gZoom < 7) {
+    breakLayer() {
+      if (this.zoom < 7) {
         return 0
-      } else if (gZoom < 12) {
+      } else if (this.zoom < 12) {
         return 1
-      } else if (gZoom < 18) {
+      } else if (this.zoom < 18) {
         return 2
       }
       return 3
@@ -2116,7 +2084,77 @@ export default {
             this.mapCoordSize.width
         )
       }
-      console.log(this.emojiToggle)
+      // console.log(this.emojiToggle)
+    },
+    getEmojiLocation(x, y) {
+      this.emojiLocation = ''
+      let xEmojiLoc = (
+        this.findSqIDByWorldCoords(x) / Math.pow(36, this.currentScale)
+      ).toString(36)
+      let yEmojiLoc = (
+        this.findSqIDByWorldCoords(y) / Math.pow(36, this.currentScale)
+      ).toString(36)
+      xEmojiLoc = xEmojiLoc.replace('.', '')
+      yEmojiLoc = yEmojiLoc.replace('.', '')
+      for (let i = 0; i <= this.breakLayer(); i++) {
+        if (xEmojiLoc[i] === undefined) {
+          xEmojiLoc += 0
+        }
+        if (yEmojiLoc[i] === undefined) {
+          yEmojiLoc += 0
+        }
+        this.emojiLocation += `${
+          this.emojiIndexReference[xEmojiLoc[i]][yEmojiLoc[i]]
+        }`
+      }
+      return this.emojiLocation
+    },
+    // Use an Emoji String to return a valid "World Coordinate" location
+    convertEmojiInput(emojiInput) {
+      let one
+      let two
+      const reqLocation = {
+        lat: 0,
+        lng: 0
+      }
+
+      // Find [0-z][0-z] keys for matching emoji in the this.emojiIndexReference
+      for (let i = 0; i < [...emojiInput].length; i++) {
+        for (const key in this.emojiIndexReference) {
+          for (const secondKey in this.emojiIndexReference[key]) {
+            if (
+              this.emojiIndexReference[key][secondKey].match([...emojiInput][i])
+            ) {
+              one = key
+              two = secondKey
+            }
+          }
+        }
+        // Use associated emoji x/y keys with a ~Mercator Projection based equation~
+        // to find each emojis' associated square location and increase desired values by each
+        // approx
+        reqLocation.lng += this.scale[i] * (360 / 256) * parseInt(one, 36)
+        reqLocation.lat += this.scale[i] * parseInt(two, 36)
+      }
+
+      this.emojiInputZoomCenter(reqLocation)
+
+      // return reqLocation
+    },
+    // Set this.map's zoom and this.currentScale using length of emoji input
+    // Convert loc argument from lat/lng to "World Coordinates"
+    // Set this.center to loc AND this.map.setCenter to this.center
+    emojiInputZoomCenter(loc) {
+      loc.lng -= 180
+      this.setZoomByEmojiLength(
+        Math.ceil(this.$route.params.emojiCode.length / 2)
+      )
+      loc.lat = this.map
+        .getProjection()
+        .fromPointToLatLng(new this.google.maps.Point(loc.lng, loc.lat))
+        .lat()
+      this.center = loc
+      this.map.setCenter(this.center)
     },
     drawEmojis(nextLineDist) {
       if (this.emojiToggle === 'Off') {
@@ -2160,27 +2198,21 @@ export default {
         }
       }
     },
-    drawGrid() {
-      const level = this.scale[this.currentScale]
-
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-
-      this.ctx.beginPath()
-      // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
-      // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
-      // 1113174.304 mEL @ zoom = 1 */
-      this.ctx.strokeStyle = `rgb(${255 / this.currentScale}, ${
-        255 / this.currentScale
-      }, 255)`
-      const pxPerEmoji =
-        1113174.304 /
-        ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
-          Math.pow(2, this.zoom))
-
-      this.drawLat(level)
-      this.drawLng(level)
-      this.ctx.closePath()
-      this.ctx.stroke()
+    firstLatLineInPx() {
+      const emojis = this.scale[this.currentScale]
+      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
+      return (
+        (Math.ceil(this.bounds.sw.x / emojis) * emojis - this.bounds.sw.x) *
+        pxPerCoord
+      )
+    },
+    firstLngLineInPx() {
+      const emojis = this.scale[this.currentScale]
+      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
+      return (
+        (Math.ceil(this.bounds.ne.y / emojis) * emojis - this.bounds.ne.y) *
+        pxPerCoord
+      )
     },
     drawLat(emojis) {
       const pxPerCoord = this.canvas.width / this.mapCoordSize.width
@@ -2204,24 +2236,30 @@ export default {
         this.ctx.lineTo(0, i)
       }
     },
-    firstLatLineInPx() {
-      const emojis = this.scale[this.currentScale]
-      const pxPerCoord = this.canvas.width / this.mapCoordSize.width
-      return (
-        (Math.ceil(this.bounds.sw.x / emojis) * emojis - this.bounds.sw.x) *
-        pxPerCoord
-      )
+    drawGrid() {
+      const level = this.scale[this.currentScale]
+
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+
+      this.ctx.beginPath()
+      // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
+      // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
+      // 1113174.304 mEL @ zoom = 1 */
+      this.ctx.strokeStyle = `rgb(${255 / this.currentScale}, ${
+        255 / this.currentScale
+      }, 255)`
+      // const pxPerEmoji =
+      //   1113174.304 /
+      //   ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
+      //     Math.pow(2, this.zoom))
+
+      this.drawLat(level)
+      this.drawLng(level)
+      this.ctx.closePath()
+      this.ctx.stroke()
     },
-    firstLngLineInPx() {
-      const emojis = this.scale[this.currentScale]
-      const pxPerCoord = this.canvas.height / this.mapCoordSize.height
-      return (
-        (Math.ceil(this.bounds.ne.y / emojis) * emojis - this.bounds.ne.y) *
-        pxPerCoord
-      )
-    },
-    // The mapping between latitude, longitude and pixels is defined by the web
-    // mercator projection.
+    // The mapping from lat, lng to googles "World Coordinates" system
+    // is defined by a mercator projection. This method converts them.
     mercatorProject(latLng) {
       let siny = Math.sin((latLng.lat() * Math.PI) / 180)
       // Truncating to 0.9999 effectively limits latitude to 89.189. This is
@@ -2232,6 +2270,20 @@ export default {
         this.tileSize *
           (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI))
       )
+    },
+    // Set this.bounds corner coords to equivalent "World Coordinate" values by
+    // translating their original (lat, lng) coordinates using a Mercator Projection
+    mercCoords() {
+      this.bounds.ne = this.mercatorProject(this.map.getBounds().getNorthEast())
+      this.bounds.sw = this.mercatorProject(this.map.getBounds().getSouthWest())
+    },
+    noNegCoords() {
+      this.bounds.ne.lat =
+        180 - (this.map.getBounds().getNorthEast().lat() + 90)
+      this.bounds.sw.lat =
+        180 - (this.map.getBounds().getSouthWest().lat() + 90)
+      this.bounds.ne.lng = this.map.getBounds().getNorthEast().lng() + 180
+      this.bounds.sw.lng = this.map.getBounds().getSouthWest().lng() + 180
     },
     // receives a place object via the autocomplete component
     setPlace(place) {
@@ -2245,10 +2297,15 @@ export default {
         }
         this.markers.push({ position: marker })
         this.places.push(this.currentPlace)
+        console.log(`NEW "place" added for: ${this.currentPlace}`)
+        console.log(
+          `NEW "marker" added @: ${this.markers[this.markers.length - 1]}`
+        )
         this.center = marker
         this.currentPlace = null
       }
     },
+    // Set current real world GPS location to this.center
     geolocate() {
       navigator.geolocation.getCurrentPosition((position) => {
         this.center = {
@@ -2257,23 +2314,25 @@ export default {
         }
       })
     },
+    // Mouse input listener logic
     mouseCheck() {
-      const that = this
-      document.onmousedown = function () {
-        that.mouse.down = true
-      }
-      document.onmouseup = function () {
-        that.mouse.down = false
-      }
-      document.onmousemove = function (e) {
-        if (that.mouse.down) {
-          // that.mouse.dir = e.pageX - that.mouse.oldX
-          // that.drawGrid()
-          // that.mouse.dir = 0
-        }
-        // that.mouse.oldX = e.pageX
-      }
+      // const that = this
+      // document.onmousedown = function () {
+      //   that.mouse.down = true
+      // }
+      // document.onmouseup = function () {
+      //   that.mouse.down = false
+      // }
+      // document.onmousemove = function (e) {
+      //   if (that.mouse.down) {
+      //     // that.mouse.dir = e.pageX - that.mouse.oldX
+      //     // that.drawGrid()
+      //     // that.mouse.dir = 0
+      //   }
+      //   // that.mouse.oldX = e.pageX
+      // }
     },
+    // Add any needed remote libraries using js in place of hardcoded html
     addRemoteLibraries() {
       const plugin = document.createElement('script')
       plugin.setAttribute(
@@ -2283,6 +2342,22 @@ export default {
       plugin.async = true
       document.head.appendChild(plugin)
     }
+  },
+  watch: {
+    // Logic to tie google maps' zoom to this.zoom and correct
+    // against any desired zoom level restrictions
+    zoom(val) {
+      if (val < this.minZoomLevel) {
+        this.zoom = this.minZoomLevel
+        this.map.setZoom(this.minZoomLevel)
+      } else {
+        this.fixedZooms(val)
+      }
+      // console.log('Zoom @: ' + this.zoom)
+    }
+  },
+  computed: {
+    google: gmapApi
   }
 }
 </script>
@@ -2291,18 +2366,6 @@ export default {
 html {
   overflow: hidden;
 }
-#emoji-map {
-  height: calc(100vh - 260px);
-  width: calc(100vw);
-  /* width: 600px; */
-  /* border: 3px solid rgb(18, 18, 18); */
-  /* border: 3px inset rgb(51, 89, 119); */
-  /* border-radius: 15px; */
-  /* border-right: 55px solid rgb(18, 18, 18);
-  border-left: 55px solid rgb(18, 18, 18); */
-  color: white;
-  pointer-events: none;
-}
 #zindex1 {
   position: absolute;
   z-index: 1;
@@ -2310,69 +2373,83 @@ html {
 }
 .map {
   position: relative;
-  /* border: 1px inset rgb(51, 89, 119); */
-  /* border-radius: 15px; */
   top: 0px;
   left: 0px;
-  /* height: calc(100vh - 260px); */
-  /* width: calc(100vw); */
-}
-#g-map {
-  top: 0px;
-  left: 0px;
-  height: calc(100vh - 260px);
+  height: calc(100vh - 150px);
   width: calc(100vw);
 }
-#ui {
-  position: relative;
-  top: 15px;
+#emoji-map {
+  /* height: calc(100vh - 152px); */
+  border-bottom: 4px groove #272727;
+  color: white;
+  pointer-events: none;
 }
-#tdCursor {
-  width: 250px;
-  /* font-family: 'OpenMojiColor'; */
+#g-map {
+}
+#ui {
+  display: flex;
+  justify-content: center;
   position: relative;
-  top: 0px;
-  left: calc(50vw - 125px);
-  z-index: 3 !important;
-  font-size: 24pt;
-  background: rgb(233, 180, 40);
-  border: 4px groove rgb(255, 202, 80);
-  border-radius: 15px;
+  top: 5px;
+}
+#vert {
+  display: flex;
+  position: relative;
+  left: 0px;
+  margin: 10px;
+  flex-direction: column;
+}
+.ui-component {
+  text-shadow: 2px 2px #121212;
+  position: relative;
+  min-width: 36px !important;
+  padding: 0px !important;
+  /* display: flex; */
+  position: relative;
+  /* background: rgb(233, 180, 40); */
+  /* border: 3px groove rgb(255, 202, 80); */
+  border-radius: 10px;
+}
+.zoom {
+  height: 18px !important;
 }
 #emoji-button {
   height: 36px;
-  width: 75px;
-  /* z-index: 2; */
+}
+#tdCursor {
+  font-size: 28pt;
   position: relative;
-  left: 295px;
-  top: -105px;
-  background: rgb(233, 180, 40);
-  border: 3px groove rgb(255, 202, 80);
-  border-radius: 10px;
-  /* color: yellow; */
-  /* font-weight: 700; */
+  z-index: 1 !important;
+  top: -10px;
+  text-align: center;
+  width: 250px;
+  border-bottom: 1px solid #121212;
+  /* font-family: 'OpenMojiColor'; */
 }
 #link-area {
-  font-size: 10pt;
+  font-size: 12pt;
+  font-variant-caps: all-small-caps;
+  font-weight: 700;
   position: relative;
-  top: -51px;
-  left: -38px;
-  z-index: 1;
+  top: -10px;
+  left: 6px;
+  /* z-index: 0; */
   text-align: center;
-  padding-top: 50px;
+  /* padding-bottom: 15px; */
   /* padding-right: 10px; */
-  background: rgb(255, 244, 180);
-  height: 80px;
-  border: 3px groove rgb(255, 225, 100);
-  border-radius: 6px;
-  width: calc(240px);
-  color: black;
+  background: #222; /*rgb(255, 244, 180);*/
+  height: 28px;
+  border-top: 1px solid #181818; /*rgb(255, 225, 100);*/
+  border-radius: 0px 0px 6px 6px;
+  width: 238px;
+  color: white;
   transform-origin: top;
   transition: transform 750ms ease-out;
   -moz-transform: transform 750ms ease-out;
   -webkit-transition: transform 750ms ease-out;
   transform: scaleY(0);
   resize: none;
+  overflow: hidden;
 }
 #tdCursor:hover ~ #link-area {
   transform: scaleY(1);
