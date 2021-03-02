@@ -39,6 +39,7 @@
 </template>
 
 <script>
+
 import router from '@/router'
 import { mapActions } from 'vuex'
 
