@@ -1901,7 +1901,7 @@ export default {
     }
   },
   mounted() {
-    this.geolocate()
+    // this.geolocate()
     // this.addMarker()
     this.init()
   },
@@ -1990,11 +1990,13 @@ export default {
 
             // If an emojiCode exists in URL then handle with this.convertEmojiInput
             if (this.$route.params.emojiCode) {
-              this.convertEmojiInput(this.$route.params.emojiCode)
-              console.log(
-                `converted emoji input: ${map.getCenter().lat()}`,
-                map.getCenter().lng()
-              )
+              setTimeout(() => {
+                this.convertEmojiInput(this.$route.params.emojiCode)
+                console.log(
+                  `converted emoji input: ${map.getCenter().lat()}`,
+                  map.getCenter().lng()
+                )
+              }, 2000)
             }
           }
         )
@@ -2008,6 +2010,7 @@ export default {
       if (this.bounds.ne.y < 0 || this.bounds.sw.y > 256) {
         // still within valid bounds, so save the last valid position
         this.map.panTo(this.center)
+        console.log('RECENTER! - OUT OF SAFE BOUNDS!')
       }
     },
     findSqIDByWorldCoords(wCoords) {
@@ -2020,7 +2023,30 @@ export default {
       this.zoom++
     },
     zoomOut() {
-      this.zoom--
+      if (this.zoom > 3) {
+        this.zoom--
+      }
+    },
+    slowZoom(levels) {
+      if (levels > 0) {
+        // console.log(this.zoom)
+        console.log(`levels: ${levels}`)
+        this.map.setZoom(this.map.getZoom() + 1)
+        // this.zoomIn()
+        setTimeout(() => {
+          this.slowZoom((levels -= 1))
+        }, 750)
+      } else if (levels < 0) {
+        this.map.setZoom(this.map.getZoom() - 1)
+        // console.log(this.zoom)
+        console.log(`levels: ${levels}`)
+        // this.zoomOut()
+        setTimeout(() => {
+          this.slowZoom((levels += 1))
+        }, 750)
+      } else {
+        this.zoom = this.map.getZoom()
+      }
     },
     fixedZooms(val) {
       if (val < this.map.getZoom()) {
@@ -2048,24 +2074,24 @@ export default {
       this.map.setZoom(this.zoom)
     },
     setZoomByEmojiLength(len) {
-      this.currentScale = len - 1
-      // console.log(len)
-      if (len === 1) {
-        this.zoom = 3
-      } else if (len === 2) {
-        this.zoom = 7
-      } else if (len === 3) {
-        this.zoom = 12
-      } else if (len === 4) {
-        this.zoom = 18
+      this.currentScale = len
+      console.log(`length: ${this.currentScale}`)
+      if (this.currentScale === 1) {
+        this.slowZoom(3 - this.map.getZoom())
+      } else if (this.currentScale === 2) {
+        this.slowZoom(7 - this.map.getZoom())
+      } else if (this.currentScale === 3) {
+        this.slowZoom(12 - this.map.getZoom())
+      } else if (this.currentScale === 4) {
+        this.slowZoom(18 - this.map.getZoom())
       }
     },
     breakLayer() {
-      if (this.zoom < 7) {
+      if (this.map.getZoom() < 7) {
         return 0
-      } else if (this.zoom < 12) {
+      } else if (this.map.getZoom() < 12) {
         return 1
-      } else if (this.zoom < 18) {
+      } else if (this.map.getZoom() < 18) {
         return 2
       }
       return 3
@@ -2118,6 +2144,7 @@ export default {
         lng: 0
       }
 
+      // console.log('DOGE!: ' + [...emojiInput].length)
       // Find [0-z][0-z] keys for matching emoji in the this.emojiIndexReference
       for (let i = 0; i < [...emojiInput].length; i++) {
         for (const key in this.emojiIndexReference) {
@@ -2146,15 +2173,21 @@ export default {
     // Set this.center to loc AND this.map.setCenter to this.center
     emojiInputZoomCenter(loc) {
       loc.lng -= 180
-      this.setZoomByEmojiLength(
-        Math.ceil(this.$route.params.emojiCode.length / 2)
-      )
       loc.lat = this.map
         .getProjection()
         .fromPointToLatLng(new this.google.maps.Point(loc.lng, loc.lat))
         .lat()
+      // const bounds = new this.google.maps.LatLngBounds()
+      // bounds.extend(this.center)
       this.center = loc
-      this.map.setCenter(this.center)
+      // bounds.extend(loc)
+      // this.map.fitBounds(bounds)
+      this.zoom = 1
+      setTimeout(() => {
+        console.log('World!')
+        this.map.panTo(this.center)
+        this.setZoomByEmojiLength([...this.$route.params.emojiCode].length)
+      }, 1000)
     },
     drawEmojis(nextLineDist) {
       if (this.emojiToggle === 'Off') {
@@ -2174,16 +2207,22 @@ export default {
             j < this.canvas.height + nextLineDist;
             j += nextLineDist
           ) {
-            this.ctx.fillText(
-              // String.fromCodePoint(
-              `${
-                this.emojiIndexReference[sqID.x.toString(36)][
-                  sqID.y.toString(36)
-                ]
-              }`,
-              this.firstLatLineInPx() - nextLineDist + i - 7,
-              this.firstLngLineInPx() - nextLineDist + j + 4
-            )
+            if (
+              this.emojiIndexReference[sqID.x.toString(36)][
+                sqID.y.toString(36)
+              ] !== undefined
+            ) {
+              this.ctx.fillText(
+                // String.fromCodePoint(
+                `${
+                  this.emojiIndexReference[sqID.x.toString(36)][
+                    sqID.y.toString(36)
+                  ]
+                }`,
+                this.firstLatLineInPx() - nextLineDist + i - 7,
+                this.firstLngLineInPx() - nextLineDist + j + 4
+              )
+            }
             if (sqID.y < 35) {
               sqID.y++
             } else {
@@ -2291,9 +2330,14 @@ export default {
     },
     addMarker() {
       if (this.currentPlace) {
-        const marker = {
-          lat: this.currentPlace.geometry.location.lat(),
-          lng: this.currentPlace.geometry.location.lng()
+        let marker
+        try {
+          marker = {
+            lat: this.currentPlace.geometry.location.lat(),
+            lng: this.currentPlace.geometry.location.lng()
+          }
+        } catch (e) {
+          marker = this.currentPlace
         }
         this.markers.push({ position: marker })
         this.places.push(this.currentPlace)
@@ -2347,13 +2391,14 @@ export default {
     // Logic to tie google maps' zoom to this.zoom and correct
     // against any desired zoom level restrictions
     zoom(val) {
-      if (val < this.minZoomLevel) {
-        this.zoom = this.minZoomLevel
-        this.map.setZoom(this.minZoomLevel)
-      } else {
-        this.fixedZooms(val)
-      }
-      // console.log('Zoom @: ' + this.zoom)
+      // if (val < this.minZoomLevel) {
+      //   this.map.setZoom(this.minZoomLevel)
+      //   console.log('zooombini: ' + this.zoom)
+      //   this.zoom = this.minZoomLevel
+      // } else {
+      this.fixedZooms(val)
+      console.log(`Zoom @: ${this.zoom}`)
+      // }
     }
   },
   computed: {
@@ -2379,7 +2424,6 @@ html {
   width: calc(100vw);
 }
 #emoji-map {
-  /* height: calc(100vh - 152px); */
   border-bottom: 4px groove #272727;
   color: white;
   pointer-events: none;
@@ -2404,7 +2448,6 @@ html {
   position: relative;
   min-width: 36px !important;
   padding: 0px !important;
-  /* display: flex; */
   position: relative;
   /* background: rgb(233, 180, 40); */
   /* border: 3px groove rgb(255, 202, 80); */
@@ -2433,10 +2476,7 @@ html {
   position: relative;
   top: -10px;
   left: 6px;
-  /* z-index: 0; */
   text-align: center;
-  /* padding-bottom: 15px; */
-  /* padding-right: 10px; */
   background: #222; /*rgb(255, 244, 180);*/
   height: 28px;
   border-top: 1px solid #181818; /*rgb(255, 225, 100);*/
