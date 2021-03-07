@@ -1441,6 +1441,7 @@ export default {
           z: '🐊'
         }
       },
+      disableZoom: true,
       minZoomLevel: 3,
       zoom: null,
       currentScale: 2,
@@ -1997,6 +1998,8 @@ export default {
                   map.getCenter().lng()
                 )
               }, 2000)
+            } else {
+              this.disableZoom = false
             }
           }
         )
@@ -2020,10 +2023,12 @@ export default {
       return this.findSqIDByWorldCoords(wCoords) % 36
     },
     zoomIn() {
-      this.zoom++
+      if (!this.disableZoom) {
+        this.zoom++
+      }
     },
     zoomOut() {
-      if (this.zoom > 3) {
+      if (this.zoom > 3 && !this.disableZoom) {
         this.zoom--
       }
     },
@@ -2046,6 +2051,7 @@ export default {
         }, 750)
       } else {
         this.zoom = this.map.getZoom()
+        this.disableZoom = false
       }
     },
     fixedZooms(val) {
