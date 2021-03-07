@@ -1902,7 +1902,7 @@ export default {
     }
   },
   mounted() {
-    // this.geolocate()
+    this.geolocate()
     // this.addMarker()
     this.init()
   },
@@ -1940,6 +1940,12 @@ export default {
             `${this.emojiLocation}`
           const elinkArea = document.getElementById('link-area')
           elinkArea.innerHTML = `http://www.ourearth.care/${this.emojiLocation}`
+        })
+
+        map.addListener('zoom_changed', () => {
+          this.zoom = map.getZoom()
+          // this.fixedZooms(this.zoom)
+          console.log(`zoom @: ${this.zoom}`)
         })
 
         map.addListener('bounds_changed', () => {
@@ -1987,7 +1993,7 @@ export default {
           'projection_changed',
           () => {
             // Initialize zoom at the minimum zoom level at beginning of app
-            this.zoom = this.minZoomLevel
+            map.setZoom(this.minZoomLevel)
 
             // If an emojiCode exists in URL then handle with this.convertEmojiInput
             if (this.$route.params.emojiCode) {
@@ -2024,12 +2030,12 @@ export default {
     },
     zoomIn() {
       if (!this.disableZoom) {
-        this.zoom++
+        this.map.setZoom(this.map.getZoom() + 1)
       }
     },
     zoomOut() {
       if (this.zoom > 3 && !this.disableZoom) {
-        this.zoom--
+        this.map.setZoom(this.map.getZoom() - 1)
       }
     },
     slowZoom(levels) {
@@ -2050,8 +2056,9 @@ export default {
           this.slowZoom((levels += 1))
         }, 750)
       } else {
-        this.zoom = this.map.getZoom()
+        // this.zoom = this.map.getZoom()
         this.disableZoom = false
+        console.log(`disable zoom: ${this.disableZoom}`)
       }
     },
     fixedZooms(val) {
@@ -2065,6 +2072,7 @@ export default {
         } else if (val === 22) {
           val = 21
         }
+        this.map.setZoom(val)
       } else if (val > this.map.getZoom()) {
         if (val === 6) {
           val = 7
@@ -2075,9 +2083,8 @@ export default {
         } else if (val === 22) {
           val = 21
         }
+        this.map.setZoom(val)
       }
-      this.zoom = val
-      this.map.setZoom(this.zoom)
     },
     setZoomByEmojiLength(len) {
       this.currentScale = len
@@ -2188,10 +2195,10 @@ export default {
       this.center = loc
       // bounds.extend(loc)
       // this.map.fitBounds(bounds)
-      this.zoom = 1
+      // this.zoom = 1
+      this.map.panTo(this.center)
       setTimeout(() => {
         console.log('World!')
-        this.map.panTo(this.center)
         this.setZoomByEmojiLength([...this.$route.params.emojiCode].length)
       }, 1000)
     },
@@ -2290,9 +2297,10 @@ export default {
       // metersPerPx = 156543.03392 * Math.cos(latLng.lat() * Math.PI / 180) / Math.pow(2, zoom)
       // pxsPerMeter = Math.pow(2, this.zoom) / (156543.03392 * Math.cos(latLng.lat() * Math.PI / 180))
       // 1113174.304 mEL @ zoom = 1 */
-      this.ctx.strokeStyle = `rgb(${255 / this.currentScale}, ${
-        255 / this.currentScale
-      }, 255)`
+      this.ctx.strokeStyle = `rgb(0, 0, 0)`
+      // `rgb(${255 / this.currentScale}, ${
+      //   255 / this.currentScale
+      // }, 255)`
       // const pxPerEmoji =
       //   1113174.304 /
       //   ((156543.03392 * Math.cos((this.center.lat * Math.PI) / 180)) /
@@ -2396,16 +2404,16 @@ export default {
   watch: {
     // Logic to tie google maps' zoom to this.zoom and correct
     // against any desired zoom level restrictions
-    zoom(val) {
-      // if (val < this.minZoomLevel) {
-      //   this.map.setZoom(this.minZoomLevel)
-      //   console.log('zooombini: ' + this.zoom)
-      //   this.zoom = this.minZoomLevel
-      // } else {
-      this.fixedZooms(val)
-      console.log(`Zoom @: ${this.zoom}`)
-      // }
-    }
+    // zoom(val) {
+    // if (val < this.minZoomLevel) {
+    //   this.map.setZoom(this.minZoomLevel)
+    //   console.log('zooombini: ' + this.zoom)
+    //   this.zoom = this.minZoomLevel
+    // } else {
+    // this.fixedZooms(val)
+    // console.log(`Zoom @: ${this.zoom}`)
+    // }
+    // }
   },
   computed: {
     google: gmapApi
