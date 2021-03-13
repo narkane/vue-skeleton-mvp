@@ -65,6 +65,7 @@ export default {
   props: ['reqEmojiLoc'],
   data() {
     return {
+      reticleSize: 3,
       canvas: null,
       ctx: null,
       map: null,
@@ -1455,6 +1456,8 @@ export default {
       this.ctx = this.canvas.getContext('2d')
       const googleMapElement = document.getElementById('g-map')
 
+      this.drawReticle()
+
       // this.mouseCheck()
 
       this.$refs.mapRef.$mapPromise.then((map) => {
@@ -1462,36 +1465,41 @@ export default {
 
         // console.log(map.getUiSettings)
         map.set('disableDefaultUI', true)
+        map.set('gestureHandling', 'none')
 
-        map.addListener('mousemove', (event) => {
-          const coordsLabel = document.getElementById('tdCursor')
-          let x = this.mercatorProject(event.latLng).x
-          // const xC = event.latLng.lng()
-          x = x.toFixed(4)
-          let y = this.mercatorProject(event.latLng).y
-          // const yC = event.latLng.lat()
-          y = y.toFixed(4)
-          this.getEmojiLocation(x, y)
-          coordsLabel.innerHTML =
-            // `X: ${xC}  Y: ${yC}
-            // <BR/> x: ${x}, y: ${y}` +
-            // `sqID.x: ${(
-            //   this.findSqIDByWorldCoords(x) / Math.pow(this.numberOfEmojis, this.currentScale)
-            // ).toString(this.numberOfEmojis)} sqID.y: ${(
-            //   this.findSqIDByWorldCoords(y) / Math.pow(this.numberOfEmojis, this.currentScale)
-            // ).toString(this.numberOfEmojis)}<BR/>` +
-            `${this.emojiLocation}`
-          const elinkArea = document.getElementById('link-area')
-          elinkArea.innerHTML = `http://www.ourearth.care/${this.emojiLocation}`
-        })
+        // map.addListener('mousemove', (event) => {
+        //   const coordsLabel = document.getElementById('tdCursor')
+        //   let x = this.mercatorProject(event.latLng).x
+        //   // const xC = event.latLng.lng()
+        //   x = x.toFixed(4)
+        //   let y = this.mercatorProject(event.latLng).y
+        //   // const yC = event.latLng.lat()
+        //   y = y.toFixed(4)
+        //   this.getEmojiLocation(x, y)
+        //   coordsLabel.innerHTML =
+        //     // `X: ${xC}  Y: ${yC}
+        //     // <BR/> x: ${x}, y: ${y}` +
+        //     // `sqID.x: ${(
+        //     //   this.findSqIDByWorldCoords(x) / Math.pow(this.numberOfEmojis, this.currentScale)
+        //     // ).toString(this.numberOfEmojis)} sqID.y: ${(
+        //     //   this.findSqIDByWorldCoords(y) / Math.pow(this.numberOfEmojis, this.currentScale)
+        //     // ).toString(this.numberOfEmojis)}<BR/>` +
+        //     `${this.emojiLocation}`
+        //   const elinkArea = document.getElementById('link-area')
+        //   elinkArea.innerHTML = `http://www.ourearth.care/${this.emojiLocation}`
+        // })
 
         map.addListener('zoom_changed', () => {
+          if (this.map.getZoom() < 3) {
+            this.map.setZoom(3)
+          }
           this.zoom = map.getZoom()
           // this.fixedZooms(this.zoom)
           console.log(`zoom @: ${this.zoom}`)
         })
 
         map.addListener('bounds_changed', () => {
+          this.calcEmojiReadout()
           // Limit the north/south pole max bounds of map
           // by recentering map when app attempts to leave google
           // maps' north/south pole limits/boundries
@@ -1556,6 +1564,46 @@ export default {
 
       this.canvas.height = googleMapElement.offsetHeight
       this.canvas.width = googleMapElement.offsetWidth
+    },
+    drawReticle() {
+      // this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+      this.ctx.strokeStyle = `rgba(255, 0, 0, 0.6)`
+      // this.ctx.fillRect(
+      //   (this.canvas.width - this.reticleSize) / 2,
+      //   (this.canvas.height - this.reticleSize) / 2,
+      //   this.reticleSize,
+      //   this.reticleSize
+      // )
+      this.ctx.beginPath()
+      this.ctx.arc(
+        this.canvas.width / 2,
+        this.canvas.height / 2,
+        this.reticleSize,
+        0,
+        2 * Math.PI
+      )
+      this.ctx.stroke()
+    },
+    calcEmojiReadout() {
+      const coordsLabel = document.getElementById('tdCursor')
+      let x = this.mercatorProject(this.map.getCenter()).x
+      // const xC = event.latLng.lng()
+      x = x.toFixed(4)
+      let y = this.mercatorProject(this.map.getCenter()).y
+      // const yC = event.latLng.lat()
+      y = y.toFixed(4)
+      this.getEmojiLocation(x, y)
+      coordsLabel.innerHTML =
+        // `X: ${xC}  Y: ${yC}
+        // <BR/> x: ${x}, y: ${y}` +
+        // `sqID.x: ${(
+        //   this.findSqIDByWorldCoords(x) / Math.pow(this.numberOfEmojis, this.currentScale)
+        // ).toString(this.numberOfEmojis)} sqID.y: ${(
+        //   this.findSqIDByWorldCoords(y) / Math.pow(this.numberOfEmojis, this.currentScale)
+        // ).toString(this.numberOfEmojis)}<BR/>` +
+        `${this.emojiLocation}`
+      const elinkArea = document.getElementById('link-area')
+      elinkArea.innerHTML = `http://www.ourearth.care/${this.emojiLocation}`
     },
     // eslint-disable-next-line max-statements
     boundWorld() {
@@ -1794,6 +1842,7 @@ export default {
             sqID.x = 0
           }
         }
+        this.drawReticle()
       }
     },
     firstLatLineInPx() {
@@ -1856,6 +1905,7 @@ export default {
       this.drawLng(level)
       this.ctx.closePath()
       this.ctx.stroke()
+      this.drawReticle()
     },
     // The mapping from lat, lng to googles "World Coordinates" system
     // is defined by a mercator projection. This method converts them.
@@ -1980,10 +2030,11 @@ html {
   position: relative;
   top: 0px;
   left: 0px;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 100px);
   width: calc(100vw);
 }
 #emoji-map {
+  border-top: 4px groove #272727;
   border-bottom: 4px groove #272727;
   color: white;
   pointer-events: none;
@@ -1994,7 +2045,8 @@ html {
   display: flex;
   justify-content: center;
   position: relative;
-  top: 5px;
+  z-index: 2;
+  top: -75px;
 }
 #vert {
   display: flex;
