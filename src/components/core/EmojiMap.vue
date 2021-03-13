@@ -1582,6 +1582,7 @@ export default {
         0,
         2 * Math.PI
       )
+      this.ctx.closePath()
       this.ctx.stroke()
     },
     calcEmojiReadout() {
@@ -1842,7 +1843,6 @@ export default {
             sqID.x = 0
           }
         }
-        this.drawReticle()
       }
     },
     firstLatLineInPx() {
