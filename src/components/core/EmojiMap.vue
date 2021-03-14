@@ -1679,15 +1679,15 @@ export default {
       }
     },
     setZoomByEmojiLength(len) {
-      this.currentScale = len
+      this.currentScale = len - 1
       console.log(`length: ${this.currentScale}`)
-      if (this.currentScale === 1) {
+      if (this.currentScale === 0) {
         this.slowZoom(3 - this.map.getZoom())
-      } else if (this.currentScale === 2) {
+      } else if (this.currentScale === 1) {
         this.slowZoom(7 - this.map.getZoom())
-      } else if (this.currentScale === 3) {
+      } else if (this.currentScale === 2) {
         this.slowZoom(12 - this.map.getZoom())
-      } else if (this.currentScale === 4) {
+      } else if (this.currentScale === 3) {
         this.slowZoom(18 - this.map.getZoom())
       }
     },
